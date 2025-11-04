@@ -19,17 +19,17 @@ import seekdbclient
 SEEKDB_PATH = os.environ.get('SEEKDB_PATH', os.path.join(project_root, "seekdb"))
 SEEKDB_DATABASE = os.environ.get('SEEKDB_DATABASE', 'test')
 
-# Server mode
-SERVER_HOST = os.environ.get('SERVER_HOST', 'localhost')
-SERVER_PORT = int(os.environ.get('SERVER_PORT', '2882'))
+# Server mode (SeekDB Server)
+SERVER_HOST = os.environ.get('SERVER_HOST', '127.0.0.1')
+SERVER_PORT = int(os.environ.get('SERVER_PORT', '2881'))  # SeekDB Server port
 SERVER_DATABASE = os.environ.get('SERVER_DATABASE', 'test')
 SERVER_USER = os.environ.get('SERVER_USER', 'root')
 SERVER_PASSWORD = os.environ.get('SERVER_PASSWORD', '')
 
 # OceanBase mode
-OB_HOST = os.environ.get('OB_HOST', 'localhost')
-OB_PORT = int(os.environ.get('OB_PORT', '2881'))
-OB_TENANT = os.environ.get('OB_TENANT', 'test')
+OB_HOST = os.environ.get('OB_HOST', '127.0.0.1')
+OB_PORT = int(os.environ.get('OB_PORT', '11402'))
+OB_TENANT = os.environ.get('OB_TENANT', 'mysql')
 OB_DATABASE = os.environ.get('OB_DATABASE', 'test')
 OB_USER = os.environ.get('OB_USER', 'root')
 OB_PASSWORD = os.environ.get('OB_PASSWORD', '')
@@ -41,9 +41,44 @@ class TestClientCreation:
     def test_create_embedded_client(self):
         """Test creating embedded client (lazy loading) and executing queries"""
         if not os.path.exists(SEEKDB_PATH):
-            pytest.skip(f"SeekDB data directory does not exist: {SEEKDB_PATH}")
+            pytest.fail(
+                f"❌ SeekDB data directory does not exist: {SEEKDB_PATH}\n\n"
+                f"Solution:\n"
+                f"  1. Create the directory: mkdir -p {SEEKDB_PATH}\n"
+                f"  2. Or set SEEKDB_PATH environment variable to an existing directory:\n"
+                f"     export SEEKDB_PATH=/path/to/your/seekdb/data\n"
+                f"     python3 -m pytest seekdbclient/tests/test_client_creation.py -v -s"
+            )
         
-        # Create client (no immediate connection)
+        # Check if seekdb package is available and properly configured
+        try:
+            import sys
+            project_root = "/home/lyl512932/pythonSDK/pyobvector"
+            if project_root in sys.path:
+                sys.path.remove(project_root)
+            import seekdb
+            if not hasattr(seekdb, 'open') and not hasattr(seekdb, '_initialize_module'):
+                pytest.fail(
+                    "❌ SeekDB embedded package is not properly installed!\n"
+                    "The 'seekdb' module exists but lacks required methods.\n"
+                    "Required: 'open' method or '_initialize_module' method\n\n"
+                    "Solution: Please install the seekdb embedded package from correct source:\n"
+                    "  pip install seekdb\n"
+                    "Or contact the seekdb package maintainer for installation guide."
+                )
+        except ImportError:
+            pytest.fail(
+                "❌ SeekDB embedded package is not installed!\n"
+                "The 'seekdb' module cannot be imported.\n\n"
+                "Solution: Please install the seekdb embedded package:\n"
+                "  pip install seekdb\n"
+                "Or contact the seekdb package maintainer for installation guide."
+            )
+        finally:
+            if project_root not in sys.path:
+                sys.path.insert(0, project_root)
+        
+        # Create client (returns _ClientProxy)
         client = seekdbclient.Client(
             path=SEEKDB_PATH,
             database=SEEKDB_DATABASE
@@ -51,20 +86,22 @@ class TestClientCreation:
         
         # Verify client type and properties
         assert client is not None
-        assert isinstance(client, seekdbclient.SeekdbEmbeddedClient)
-        assert client.mode == "SeekdbEmbeddedClient"
-        assert client.database == SEEKDB_DATABASE
+        # Client now returns a proxy
+        assert hasattr(client, '_server')
+        assert isinstance(client._server, seekdbclient.SeekdbEmbeddedClient)
+        assert client._server.mode == "SeekdbEmbeddedClient"
+        assert client._server.database == SEEKDB_DATABASE
         
         # Should not be connected at this point (lazy loading)
-        assert not client.is_connected()
+        assert not client._server.is_connected()
         
-        # Execute query (first use, triggers connection)
-        result = client.execute("SELECT 1")
+        # Execute query through proxy (first use, triggers connection)
+        result = client._server.execute("SELECT 1")
         assert result is not None
         assert len(result) > 0
         
         # Should be connected now
-        assert client.is_connected()
+        assert client._server.is_connected()
         
         print(f"\n✅ Embedded client created and connected successfully: path={SEEKDB_PATH}, database={SEEKDB_DATABASE}")
         print(f"   Query result: {result[0]}")
@@ -73,7 +110,7 @@ class TestClientCreation:
     
     def test_create_server_client(self):
         """Test creating server client (lazy loading) and executing queries"""
-        # Create client (no immediate connection)
+        # Create client (returns _ClientProxy)
         client = seekdbclient.Client(
             host=SERVER_HOST,
             port=SERVER_PORT,
@@ -84,38 +121,39 @@ class TestClientCreation:
         
         # Verify client type and properties
         assert client is not None
-        assert isinstance(client, seekdbclient.SeekdbServerClient)
-        assert client.mode == "SeekdbServerClient"
-        assert client.host == SERVER_HOST
-        assert client.port == SERVER_PORT
-        assert client.database == SERVER_DATABASE
-        assert client.user == SERVER_USER
+        assert hasattr(client, '_server')
+        assert isinstance(client._server, seekdbclient.SeekdbServerClient)
+        assert client._server.mode == "SeekdbServerClient"
+        assert client._server.host == SERVER_HOST
+        assert client._server.port == SERVER_PORT
+        assert client._server.database == SERVER_DATABASE
+        assert client._server.user == SERVER_USER
         
         # Should not be connected at this point (lazy loading)
-        assert not client.is_connected()
+        assert not client._server.is_connected()
         
-        # Execute query (first use, triggers connection)
+        # Execute query through proxy (first use, triggers connection)
         try:
-            result = client.execute("SELECT 1 as test")
+            result = client._server.execute("SELECT 1 as test")
             assert result is not None
             assert len(result) > 0
             assert result[0]['test'] == 1
             
             # Should be connected now
-            assert client.is_connected()
+            assert client._server.is_connected()
             
             print(f"\n✅ Server client created and connected successfully: {SERVER_USER}@{SERVER_HOST}:{SERVER_PORT}/{SERVER_DATABASE}")
             print(f"   Query result: {result[0]}")
             
         except Exception as e:
             pytest.fail(f"Server connection failed ({SERVER_HOST}:{SERVER_PORT}): {e}\n"
-                       f"Hint: Please ensure SeekDB Server is running")
+                       f"Hint: Please ensure SeekDB Server is running on port {SERVER_PORT}")
         
         # Automatic cleanup (via __del__)
     
     def test_create_oceanbase_client(self):
         """Test creating OceanBase client (lazy loading) and executing queries"""
-        # Create client (no immediate connection)
+        # Create client (returns _ClientProxy)
         client = seekdbclient.OBClient(
             host=OB_HOST,
             port=OB_PORT,
@@ -127,29 +165,30 @@ class TestClientCreation:
         
         # Verify client type and properties
         assert client is not None
-        assert isinstance(client, seekdbclient.OceanBaseServerClient)
-        assert client.mode == "OceanBaseServerClient"
-        assert client.host == OB_HOST
-        assert client.port == OB_PORT
-        assert client.tenant == OB_TENANT
-        assert client.database == OB_DATABASE
-        assert client.user == OB_USER
-        assert client.full_user == f"{OB_USER}@{OB_TENANT}"
+        assert hasattr(client, '_server')
+        assert isinstance(client._server, seekdbclient.OceanBaseServerClient)
+        assert client._server.mode == "OceanBaseServerClient"
+        assert client._server.host == OB_HOST
+        assert client._server.port == OB_PORT
+        assert client._server.tenant == OB_TENANT
+        assert client._server.database == OB_DATABASE
+        assert client._server.user == OB_USER
+        assert client._server.full_user == f"{OB_USER}@{OB_TENANT}"
         
         # Should not be connected at this point (lazy loading)
-        assert not client.is_connected()
+        assert not client._server.is_connected()
         
-        # Execute query (first use, triggers connection)
+        # Execute query through proxy (first use, triggers connection)
         try:
-            result = client.execute("SELECT 1 as test")
+            result = client._server.execute("SELECT 1 as test")
             assert result is not None
             assert len(result) > 0
             assert result[0]['test'] == 1
             
             # Should be connected now
-            assert client.is_connected()
+            assert client._server.is_connected()
             
-            print(f"\n✅ OceanBase client created and connected successfully: {client.full_user}@{OB_HOST}:{OB_PORT}/{OB_DATABASE}")
+            print(f"\n✅ OceanBase client created and connected successfully: {client._server.full_user}@{OB_HOST}:{OB_PORT}/{OB_DATABASE}")
             print(f"   Query result: {result[0]}")
             
         except Exception as e:

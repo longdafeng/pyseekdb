@@ -1,46 +1,61 @@
 """
-Base client interface definition
+Base client interface definition (Server API)
 """
 from abc import ABC, abstractmethod
-from typing import Any, List, Optional, TYPE_CHECKING
+from typing import List, Optional, Sequence, TYPE_CHECKING
+
+from .base_connection import BaseConnection
+from .admin_client import AdminAPI, DEFAULT_TENANT
 
 if TYPE_CHECKING:
     from .collection import Collection
+    from .database import Database
 
 
-class BaseClient(ABC):
+class ClientAPI(ABC):
     """
-    Abstract base class for all clients, defining a unified interface.
-    Data operations are performed through Collection objects.
+    Client API interface for collection operations only.
+    This is what end users interact with through the Client proxy.
     """
     
-    # ==================== Connection Management ====================
-    
     @abstractmethod
-    def is_connected(self) -> bool:
-        """Check connection status"""
+    def create_collection(
+        self,
+        name: str,
+        dimension: Optional[int] = None,
+        **kwargs
+    ) -> "Collection":
+        """Create collection"""
         pass
     
     @abstractmethod
-    def _cleanup(self):
-        """Internal cleanup method to close connection and release resources"""
+    def get_collection(self, name: str) -> "Collection":
+        """Get collection object"""
         pass
     
     @abstractmethod
-    def execute(self, sql: str) -> Any:
-        """Execute SQL statement (basic functionality)"""
+    def delete_collection(self, name: str) -> None:
+        """Delete collection"""
         pass
     
     @abstractmethod
-    def get_raw_connection(self) -> Any:
-        """Get raw connection object"""
+    def list_collections(self) -> List["Collection"]:
+        """List all collections"""
         pass
     
-    @property
     @abstractmethod
-    def mode(self) -> str:
-        """Return client mode (e.g., 'SeekdbEmbeddedClient', 'SeekdbServerClient', 'OceanBaseServerClient')"""
+    def has_collection(self, name: str) -> bool:
+        """Check if collection exists"""
         pass
+
+
+class BaseClient(BaseConnection, AdminAPI):
+    """
+    Abstract base class for all clients (ServerAPI pattern).
+    Provides both Collection management and Database management.
+    All concrete implementations handle the actual business logic.
+    Inherits connection management from BaseConnection and database operations from AdminAPI.
+    """
     
     # ==================== Collection Management ====================
     
@@ -109,23 +124,3 @@ class BaseClient(ABC):
             Whether it exists
         """
         pass
-    
-    # ==================== Context Manager ====================
-    
-    def __enter__(self):
-        """Context manager support"""
-        return self
-    
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """Context manager support: automatic resource cleanup"""
-        self._cleanup()
-    
-    def __del__(self):
-        """Destructor: ensure connection is closed to prevent resource leaks"""
-        try:
-            if hasattr(self, '_connection') and self.is_connected():
-                self._cleanup()
-        except Exception:
-            # Ignore all exceptions in destructor
-            # Avoid issues during interpreter shutdown
-            pass

@@ -2,13 +2,15 @@
 OceanBase mode client - based on pymysql
 """
 import logging
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Sequence
 
 import pymysql
 from pymysql.cursors import DictCursor
 
 from .client_base import BaseClient
 from .collection import Collection
+from .database import Database
+from .admin_client import DEFAULT_TENANT
 
 logger = logging.getLogger(__name__)
 
@@ -143,6 +145,124 @@ class OceanBaseServerClient(BaseClient):
         logger.info(f"OceanBaseServerClient: has_collection framework for {name}")
         # TODO: implement OceanBase has_collection logic
         return False
+    
+    # ==================== Database Management ====================
+    
+    def create_database(self, name: str, tenant: str = DEFAULT_TENANT) -> None:
+        """
+        Create database (OceanBase has tenant concept, uses client's tenant)
+        
+        Args:
+            name: database name
+            tenant: tenant name (if different from client tenant, will use client tenant)
+        
+        Note:
+            OceanBase has multi-tenant architecture. Database is scoped to client's tenant.
+        """
+        if tenant != self.tenant and tenant != DEFAULT_TENANT:
+            logger.warning(f"Specified tenant '{tenant}' differs from client tenant '{self.tenant}', using client tenant")
+        
+        logger.info(f"Creating database: {name} in tenant: {self.tenant}")
+        sql = f"CREATE DATABASE IF NOT EXISTS `{name}`"
+        self.execute(sql)
+        logger.info(f"✅ Database created: {name} in tenant: {self.tenant}")
+    
+    def get_database(self, name: str, tenant: str = DEFAULT_TENANT) -> Database:
+        """
+        Get database object (OceanBase has tenant concept, uses client's tenant)
+        
+        Args:
+            name: database name
+            tenant: tenant name (if different from client tenant, will use client tenant)
+        
+        Returns:
+            Database object with tenant information
+        
+        Note:
+            OceanBase has multi-tenant architecture. Database is scoped to client's tenant.
+        """
+        if tenant != self.tenant and tenant != DEFAULT_TENANT:
+            logger.warning(f"Specified tenant '{tenant}' differs from client tenant '{self.tenant}', using client tenant")
+        
+        logger.info(f"Getting database: {name} in tenant: {self.tenant}")
+        sql = f"SELECT SCHEMA_NAME, DEFAULT_CHARACTER_SET_NAME, DEFAULT_COLLATION_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = '{name}'"
+        result = self.execute(sql)
+        
+        if not result:
+            raise ValueError(f"Database not found: {name}")
+        
+        row = result[0]
+        return Database(
+            name=row['SCHEMA_NAME'],
+            tenant=self.tenant,  # OceanBase has tenant concept
+            charset=row['DEFAULT_CHARACTER_SET_NAME'],
+            collation=row['DEFAULT_COLLATION_NAME']
+        )
+    
+    def delete_database(self, name: str, tenant: str = DEFAULT_TENANT) -> None:
+        """
+        Delete database (OceanBase has tenant concept, uses client's tenant)
+        
+        Args:
+            name: database name
+            tenant: tenant name (if different from client tenant, will use client tenant)
+        
+        Note:
+            OceanBase has multi-tenant architecture. Database is scoped to client's tenant.
+        """
+        if tenant != self.tenant and tenant != DEFAULT_TENANT:
+            logger.warning(f"Specified tenant '{tenant}' differs from client tenant '{self.tenant}', using client tenant")
+        
+        logger.info(f"Deleting database: {name} in tenant: {self.tenant}")
+        sql = f"DROP DATABASE IF EXISTS `{name}`"
+        self.execute(sql)
+        logger.info(f"✅ Database deleted: {name} in tenant: {self.tenant}")
+    
+    def list_databases(
+        self,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
+        tenant: str = DEFAULT_TENANT
+    ) -> Sequence[Database]:
+        """
+        List all databases (OceanBase has tenant concept, uses client's tenant)
+        
+        Args:
+            limit: maximum number of results to return
+            offset: number of results to skip
+            tenant: tenant name (if different from client tenant, will use client tenant)
+        
+        Returns:
+            Sequence of Database objects with tenant information
+        
+        Note:
+            OceanBase has multi-tenant architecture. Lists databases in client's tenant.
+        """
+        if tenant != self.tenant and tenant != DEFAULT_TENANT:
+            logger.warning(f"Specified tenant '{tenant}' differs from client tenant '{self.tenant}', using client tenant")
+        
+        logger.info(f"Listing databases in tenant: {self.tenant}")
+        sql = "SELECT SCHEMA_NAME, DEFAULT_CHARACTER_SET_NAME, DEFAULT_COLLATION_NAME FROM information_schema.SCHEMATA"
+        
+        if limit is not None:
+            if offset is not None:
+                sql += f" LIMIT {offset}, {limit}"
+            else:
+                sql += f" LIMIT {limit}"
+        
+        result = self.execute(sql)
+        
+        databases = []
+        for row in result:
+            databases.append(Database(
+                name=row['SCHEMA_NAME'],
+                tenant=self.tenant,  # OceanBase has tenant concept
+                charset=row['DEFAULT_CHARACTER_SET_NAME'],
+                collation=row['DEFAULT_COLLATION_NAME']
+            ))
+        
+        logger.info(f"✅ Found {len(databases)} databases in tenant {self.tenant}")
+        return databases
     
     def __repr__(self):
         status = "connected" if self.is_connected() else "disconnected"

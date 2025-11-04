@@ -66,38 +66,45 @@ seekdbclient.OBClient(host="localhost", tenant="mysql")           # OceanBaseSer
 | `_ensure_connection()`| Internal lazy connector (not part of public API).             |
 | `_cleanup()`          | Internal cleanup hook; called by `__exit__` / `__del__`.       |
 
-### Collection Framework (Roadmap)
-TODO
+### AdminClient for Database Management
+```python
+import seekdbclient
 
-## Project Layout
+# Server mode - Database management
+admin = seekdbclient.AdminClient(host="127.0.0.1", port=2881, user="root")
+admin.create_database("my_database")
+databases = admin.list_databases()
+admin.delete_database("my_database")
+
+# OceanBase mode - Database management (multi-tenant)
+admin = seekdbclient.OBAdminClient(host="127.0.0.1", port=11402, tenant="mysql")
+admin.create_database("analytics")
+databases = admin.list_databases()  # Scoped to tenant
 ```
-seekdbclient/
-├── __init__.py                     # Library entry point
-├── client/
-│   ├── __init__.py                 # Factory and exports
-│   ├── client_base.py              # BaseClient interface (lazy connection + cleanup)
-│   ├── client_seekdb_embedded.py   # Embedded SeekDB implementation
-│   ├── client_seekdb_server.py     # Remote SeekDB implementation (pymysql)
-│   ├── client_oceanbase_server.py  # OceanBase implementation (pymysql)
-│   └── collection.py               # Collection interface definitions
-├── examples/
-│   └── simple_connection.py        # End-to-end usage example
-├── tests/
-│   ├── test_api_framework.py       # Verifies API surface
-│   └── test_client_creation.py     # Exercises real connection flow
-└── test_oceanbase_connection.py    # Manual OceanBase connectivity script
-```
+
+**AdminClient Methods:**
+| Method                    | Description                                        |
+|---------------------------|----------------------------------------------------|
+| `create_database(name)`   | Create a new database                              |
+| `get_database(name)`      | Get database object with metadata                  |
+| `delete_database(name)`   | Delete a database                                  |
+| `list_databases(limit, offset)` | List all databases                          |
+
+**Note:** 
+- Embedded/Server mode: No tenant concept (tenant=None in Database objects)
+- OceanBase mode: Multi-tenant architecture (tenant is set in Database objects)
+
 
 ## Testing
 ```bash
-# Run all tests
-poetry run pytest seekdbclient/tests/ -v
+python3 -m pytest seekdbclient/tests/ -v
 
-# Exercise only the API surface checks
-poetry run pytest seekdbclient/tests/test_api_framework.py -v
+python3 -m pytest seekdbclient/tests/ -v -s # print log
 
-# Optional: run the live OceanBase check (requires running server)
-poetry run python test_oceanbase_connection.py
+python3 -m pytest seekdbclient/tests/test_client_creation.py::TestClientCreation::test_create_server_client -v
+
+python3 -m pytest seekdbclient/tests/test_client_creation.py -v
+
 ```
 
 ### Environment Variables (Optional)
@@ -106,24 +113,28 @@ poetry run python test_oceanbase_connection.py
 export SEEKDB_PATH=/data/seekdb
 export SEEKDB_DATABASE=demo
 export SERVER_HOST=127.0.0.1
-export SERVER_PORT=2882
+export SERVER_PORT=2881           # SeekDB Server port
 export SERVER_USER=root
 export SERVER_PASSWORD=secret
 export OB_HOST=127.0.0.1
-export OB_PORT=11402
-export OB_TENANT=mysql
+export OB_PORT=11402               # OceanBase port (from 'ob do mysql -n ob1')
+export OB_TENANT=mysql             # OceanBase tenant
 export OB_USER=root
-export OB_PASSWORD=secret
+export OB_PASSWORD=
 ```
 
-## Status
-| Component                 | State       | Notes                              |
-|---------------------------|------------|------------------------------------|
-| Client instantiation      | ✅ Complete | All three connection modes         |
-| Connection management     | ✅ Complete | Lazy connect + automatic cleanup   |
-| SQL execution             | ✅ Complete | Uses seekdb / pymysql cursors      |
-| Collection interfaces     | 🚧 Planned  | Signatures only, no logic yet      |
-| Vector/query operations   | 🚧 Planned  | To be implemented per backend      |
+## Architecture
+Following chromadb's design pattern:
+- **ClientAPI**: Collection operations interface
+- **AdminAPI**: Database operations interface
+- **ServerAPI (BaseClient)**: Implements both interfaces
+- **_ClientProxy**: Exposes only collection operations
+- **_AdminClientProxy**: Exposes only database operations
+
+```
+Client() → _ClientProxy → BaseClient (ServerAPI)
+AdminClient() → _AdminClientProxy → BaseClient (ServerAPI)
+```
 
 ## License
 MIT License

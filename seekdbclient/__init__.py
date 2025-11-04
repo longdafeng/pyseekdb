@@ -11,10 +11,10 @@ Supports three modes:
 Examples:
     >>> import seekdbclient
 
-    >>> # Embedded mode
+    >>> # Embedded mode - Collection management
     >>> client = seekdbclient.Client(path="./seekdb", database="test")
 
-    >>> # Server mode
+    >>> # Server mode - Collection management
     >>> client = seekdbclient.Client(
     ...     host='localhost',
     ...     port=2882,
@@ -23,7 +23,7 @@ Examples:
     ...     password="pass"
     ... )
 
-    >>> # OceanBase mode
+    >>> # OceanBase mode - Collection management
     >>> ob_client = seekdbclient.OBClient(
     ...     host='localhost',
     ...     port=2881,
@@ -32,16 +32,27 @@ Examples:
     ...     user="root",
     ...     password=""
     ... )
+
+    >>> # Admin client - Database management
+    >>> admin = seekdbclient.AdminClient(path="./seekdb")
+    >>> admin.create_database("new_db")
+    >>> databases = admin.list_databases()
 """
 import logging
 
 from .client import (
+    BaseConnection,
     BaseClient,
+    ClientAPI,
     SeekdbEmbeddedClient,
     SeekdbServerClient,
     OceanBaseServerClient,
     Client,
     OBClient,
+    AdminAPI,
+    AdminClient,
+    OBAdminClient,
+    Database,
 )
 from .client.collection import Collection
 
@@ -49,13 +60,19 @@ __version__ = "0.1.0"
 __author__ = "SeekDBClient Team"
 
 __all__ = [
+    'BaseConnection',
     'BaseClient',
+    'ClientAPI',
     'SeekdbEmbeddedClient',
     'SeekdbServerClient',
     'OceanBaseServerClient',
     'Client',
     'OBClient',
     'Collection',
+    'AdminAPI',
+    'AdminClient',
+    'OBAdminClient',
+    'Database',
 ]
 
 # Configure logging
