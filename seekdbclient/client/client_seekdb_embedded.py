@@ -129,8 +129,7 @@ class SeekdbEmbeddedClient(BaseClient):
         """Check connection status"""
         return self._connection is not None and self._initialized
     
-    def execute(self, sql: str) -> Any:
-        """Execute SQL statement"""
+    def execute(self, sql: str) -> Any:   
         conn = self._ensure_connection()
         cursor = conn.cursor()
         
@@ -203,7 +202,7 @@ class SeekdbEmbeddedClient(BaseClient):
                 # For other types (like lists in IN clauses), convert to string
                 escaped = str(param).replace("'", "''")
                 embedded_sql = embedded_sql.replace('%s', f"'{escaped}'", 1)
-        
+
         cursor = conn.cursor()
         try:
             cursor.execute(embedded_sql)
@@ -389,51 +388,7 @@ class SeekdbEmbeddedClient(BaseClient):
     # -------------------- DQL Operations --------------------
     # Note: _collection_query() and _collection_get() use base class implementation
     
-    def _collection_hybrid_search(
-        self,
-        collection_id: Optional[str],
-        collection_name: str,
-        query_vector: Optional[Union[List[float], List[List[float]]]] = None,
-        query_text: Optional[Union[str, List[str]]] = None,
-        where: Optional[Dict[str, Any]] = None,
-        where_document: Optional[Dict[str, Any]] = None,
-        n_results: int = 10,
-        include: Optional[List[str]] = None,
-        **kwargs
-    ) -> Dict[str, Any]:
-        """
-        [Internal] Hybrid search - Embedded implementation
-        
-        Args:
-            collection_id: Collection ID
-            collection_name: Collection name
-            query_vector: Query vector(s)
-            query_text: Query text(s)
-            where: Metadata filter
-            where_document: Document filter
-            n_results: Number of results
-            include: Fields to include
-            **kwargs: Additional parameters
-            
-        Returns:
-            Search results dictionary
-        """
-        logger.info(f"Embedded: Hybrid search in collection '{collection_name}'")
-        conn = self._ensure_connection()
-        
-        # TODO: Implement Embedded specific hybrid search logic
-        # Combine vector similarity with metadata/document filters
-        
-        results = {
-            "ids": [],
-            "distances": [],
-            "metadatas": [],
-            "documents": [],
-            "embeddings": []
-        }
-        
-        logger.info(f"✅ Hybrid search completed for '{collection_name}'")
-        return results
+    # _collection_hybrid_search is inherited from BaseClient
     
     # -------------------- Collection Info --------------------
     

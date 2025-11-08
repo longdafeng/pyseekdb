@@ -364,54 +364,58 @@ class Collection:
     
     def hybrid_search(
         self,
-        query_vector: Optional[Union[List[float], List[List[float]]]] = None,
-        query_text: Optional[Union[str, List[str]]] = None,
-        where: Optional[Dict[str, Any]] = None,
-        where_document: Optional[Dict[str, Any]] = None,
+        query: Optional[Dict[str, Any]] = None,
+        knn: Optional[Dict[str, Any]] = None,
+        rank: Optional[Dict[str, Any]] = None,
         n_results: int = 10,
         include: Optional[List[str]] = None,
         **kwargs
     ) -> Dict[str, Any]:
         """
-        Hybrid search combining vector similarity and filters
+        Hybrid search combining full-text search and vector similarity search
         
         Args:
-            query_vector: Query vector(s) (optional if query_text provided)
-            query_text: Query text(s) to be embedded (optional if query_vector provided)
-            where: Filter condition on metadata (optional)
-            where_document: Filter condition on documents (optional)
-            n_results: Number of results to return (default: 10)
-            include: Fields to include in results (optional)
+            query: Full-text search configuration dict with:
+                - where_document: Document filter conditions (e.g., {"$contains": "text"})
+                - where: Metadata filter conditions (e.g., {"page": {"$gte": 5}})
+                - n_results: Number of results for full-text search (optional)
+            knn: Vector search configuration dict with:
+                - query_texts: Query text(s) to be embedded (optional if query_embeddings provided)
+                - query_embeddings: Query vector(s) (optional if query_texts provided)
+                - where: Metadata filter conditions (optional)
+                - n_results: Number of results for vector search (optional)
+            rank: Ranking configuration dict (e.g., {"rrf": {"rank_window_size": 60, "rank_constant": 60}})
+            n_results: Final number of results to return after ranking (default: 10)
+            include: Fields to include in results (e.g., ["documents", "metadatas", "embeddings"])
             **kwargs: Additional parameters
             
         Returns:
-            Search results dictionary containing ids, distances, metadatas, documents, etc.
-            
-        Note:
-            This method combines vector similarity search with metadata/document filtering
+            Search results dictionary containing ids, distances, metadatas, documents, embeddings, etc.
             
         Examples:
-            # Hybrid search with metadata filter
+            # Hybrid search with both full-text and vector search
             results = collection.hybrid_search(
-                query_vector=[0.1, 0.2, 0.3],
-                where={"category": "science", "year": {"$gte": 2020}},
-                n_results=10
-            )
-            
-            # Hybrid search with document filter
-            results = collection.hybrid_search(
-                query_vector=[0.1, 0.2, 0.3],
-                where_document={"$contains": "machine learning"},
-                include=["metadatas", "documents", "distances"]
+                query={
+                    "where_document": {"$contains": "machine learning"},
+                    "where": {"category": {"$eq": "science"}},
+                    "n_results": 10
+                },
+                knn={
+                    "query_texts": ["AI research"],
+                    "where": {"year": {"$gte": 2020}},
+                    "n_results": 10
+                },
+                rank={"rrf": {}},
+                n_results=5,
+                include=["documents", "metadatas", "embeddings"]
             )
         """
         return self._client._collection_hybrid_search(
             collection_id=self._id,
             collection_name=self._name,
-            query_vector=query_vector,
-            query_text=query_text,
-            where=where,
-            where_document=where_document,
+            query=query,
+            knn=knn,
+            rank=rank,
             n_results=n_results,
             include=include,
             **kwargs
