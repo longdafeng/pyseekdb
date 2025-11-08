@@ -98,7 +98,7 @@ class BaseClient(BaseConnection, AdminAPI):
         # Construct table name: c$v1${name}
         table_name = f"c$v1${name}"
         
-        # Construct CREATE TABLE SQL statement
+        # Construct CREATE TABLE SQL statement with HEAP organization
         sql = f"""CREATE TABLE `{table_name}` (
             _id bigint PRIMARY KEY NOT NULL AUTO_INCREMENT,
             document string,
@@ -106,7 +106,7 @@ class BaseClient(BaseConnection, AdminAPI):
             metadata json,
             FULLTEXT INDEX idx1(document),
             VECTOR INDEX idx2 (embedding) with(distance=l2, type=hnsw, lib=vsag)
-        );"""
+        ) ORGANIZATION = HEAP;"""
         
         # Execute SQL to create table
         self.execute(sql)
@@ -905,37 +905,556 @@ class BaseClient(BaseConnection, AdminAPI):
         logger.info(f"✅ Get completed for '{collection_name}', found {len(query_result)} results")
         return query_result
     
-    @abstractmethod
     def _collection_hybrid_search(
         self,
         collection_id: Optional[str],
         collection_name: str,
-        query_vector: Optional[Union[List[float], List[List[float]]]] = None,
-        query_text: Optional[Union[str, List[str]]] = None,
-        where: Optional[Dict[str, Any]] = None,
-        where_document: Optional[Dict[str, Any]] = None,
+        query: Optional[Dict[str, Any]] = None,
+        knn: Optional[Dict[str, Any]] = None,
+        rank: Optional[Dict[str, Any]] = None,
         n_results: int = 10,
         include: Optional[List[str]] = None,
         **kwargs
     ) -> Dict[str, Any]:
         """
-        [Internal] Hybrid search combining vector similarity and filters
+        [Internal] Hybrid search combining full-text search and vector similarity search - Common SQL-based implementation
+        
+        Supports:
+        1. Scalar query (metadata filtering only)
+        2. Full-text search (with optional metadata filtering)
+        3. Vector search (with optional metadata filtering)
+        4. Scalar + vector search (with optional metadata filtering)
         
         Args:
             collection_id: Collection ID
             collection_name: Collection name
-            query_vector: Query vector(s) (optional)
-            query_text: Query text(s) (optional)
-            where: Filter condition on metadata (optional)
-            where_document: Filter condition on documents (optional)
-            n_results: Number of results to return
+            query: Full-text search configuration dict with:
+                - where_document: Document filter conditions (e.g., {"$contains": "text"})
+                - where: Metadata filter conditions (e.g., {"page": {"$gte": 5}})
+            knn: Vector search configuration dict with:
+                - query_texts: Query text(s) to be embedded (optional if query_embeddings provided)
+                - query_embeddings: Query vector(s) (optional if query_texts provided)
+                - where: Metadata filter conditions (optional)
+                - n_results: Number of results for vector search (optional)
+            rank: Ranking configuration dict (e.g., {"rrf": {"rank_window_size": 60, "rank_constant": 60}})
+            n_results: Final number of results to return after ranking (default: 10)
             include: Fields to include in results (optional)
             **kwargs: Additional parameters
             
         Returns:
-            Search results dictionary
+            Search results dictionary containing ids, distances, metadatas, documents, embeddings, etc.
         """
-        pass
+        logger.info(f"Hybrid search in collection '{collection_name}' with n_results={n_results}")
+        conn = self._ensure_connection()
+        
+        # Build table name
+        table_name = f"c$v1${collection_name}"
+        
+        # Build search_parm JSON
+        search_parm = self._build_search_parm(query, knn, rank, n_results)
+        
+        # Convert search_parm to JSON string
+        search_parm_json = json.dumps(search_parm, ensure_ascii=False)
+        
+        # Use variable binding to avoid datatype issues
+        use_context_manager = self._use_context_manager_for_cursor()
+        
+        # Set the search_parm variable first
+        escaped_params = search_parm_json.replace("'", "''")
+        set_sql = f"SET @search_parm = '{escaped_params}'"
+        logger.debug(f"Setting search_parm: {set_sql}")
+        logger.debug(f"Search parm JSON: {search_parm_json}")
+        
+        # Execute SET statement
+        self._execute_query_with_cursor(conn, set_sql, [], use_context_manager)
+        
+        # Get SQL query from DBMS_HYBRID_SEARCH.GET_SQL
+        get_sql_query = f"SELECT DBMS_HYBRID_SEARCH.GET_SQL('{table_name}', @search_parm) as query_sql"
+        logger.debug(f"Getting SQL query: {get_sql_query}")
+        
+        rows = self._execute_query_with_cursor(conn, get_sql_query, [], use_context_manager)
+        
+        if not rows or not rows[0].get("query_sql"):
+            logger.warning(f"No SQL query returned from GET_SQL")
+            return {
+                "ids": [],
+                "distances": [],
+                "metadatas": [],
+                "documents": [],
+                "embeddings": []
+            }
+        
+        # Get the SQL query string
+        query_sql = rows[0]["query_sql"]
+        if isinstance(query_sql, str):
+            # Remove any surrounding quotes if present
+            query_sql = query_sql.strip().strip("'\"")
+        
+        logger.debug(f"Executing query SQL: {query_sql}")
+        
+        # Execute the returned SQL query
+        result_rows = self._execute_query_with_cursor(conn, query_sql, [], use_context_manager)
+        
+        # Transform SQL query results to standard format
+        return self._transform_sql_result(result_rows, include)
+    
+    def _build_search_parm(
+        self,
+        query: Optional[Dict[str, Any]],
+        knn: Optional[Dict[str, Any]],
+        rank: Optional[Dict[str, Any]],
+        n_results: int
+    ) -> Dict[str, Any]:
+        """
+        Build search_parm JSON from query, knn, and rank parameters
+        
+        Args:
+            query: Full-text search configuration dict
+            knn: Vector search configuration dict
+            rank: Ranking configuration dict
+            n_results: Final number of results to return
+            
+        Returns:
+            search_parm dictionary
+        """
+        search_parm = {}
+        
+        # Build query part (full-text search or scalar query)
+        if query:
+            query_expr = self._build_query_expression(query)
+            if query_expr:
+                search_parm["query"] = query_expr
+        
+        # Build knn part (vector search)
+        if knn:
+            knn_expr = self._build_knn_expression(knn)
+            if knn_expr:
+                search_parm["knn"] = knn_expr
+        
+        # Build rank part
+        if rank:
+            search_parm["rank"] = rank
+        
+        return search_parm
+    
+    def _build_query_expression(self, query: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Build query expression from query dict
+        
+        Supports:
+        - Scalar query (metadata filtering only): query.range or query.term
+        - Full-text search: query.query_string
+        - Full-text search with metadata filtering: query.bool with must and filter
+        """
+        where_document = query.get("where_document")
+        where = query.get("where")
+        
+        # Case 1: Scalar query (metadata filtering only, no full-text search)
+        if not where_document and where:
+            filter_conditions = self._build_metadata_filter_for_search_parm(where)
+            if filter_conditions:
+                # If only one filter condition, check its type
+                if len(filter_conditions) == 1:
+                    filter_cond = filter_conditions[0]
+                    # Check if it's a range query
+                    if "range" in filter_cond:
+                        return {"range": filter_cond["range"]}
+                    # Check if it's a term query
+                    elif "term" in filter_cond:
+                        return {"term": filter_cond["term"]}
+                    # Otherwise, it's a bool query, wrap in filter
+                    else:
+                        return {"bool": {"filter": filter_conditions}}
+                # Multiple filter conditions, wrap in bool
+                return {"bool": {"filter": filter_conditions}}
+        
+        # Case 2: Full-text search (with or without metadata filtering)
+        if where_document:
+            # Build document query using query_string
+            doc_query = self._build_document_query(where_document)
+            if doc_query:
+                # Build filter from where condition
+                filter_conditions = self._build_metadata_filter_for_search_parm(where)
+                
+                if filter_conditions:
+                    # Full-text search with metadata filtering
+                    return {
+                        "bool": {
+                            "must": [doc_query],
+                            "filter": filter_conditions
+                        }
+                    }
+                else:
+                    # Full-text search only
+                    return doc_query
+        
+        return None
+    
+    def _build_document_query(self, where_document: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Build document query from where_document condition using query_string
+        
+        Args:
+            where_document: Document filter conditions
+            
+        Returns:
+            query_string query dict
+        """
+        if not where_document:
+            return None
+        
+        # Handle $contains - use query_string
+        if "$contains" in where_document:
+            return {
+                "query_string": {
+                    "fields": ["document"],
+                    "query": where_document["$contains"]
+                }
+            }
+        
+        # Handle $and with $contains
+        if "$and" in where_document:
+            and_conditions = where_document["$and"]
+            contains_queries = []
+            for condition in and_conditions:
+                if isinstance(condition, dict) and "$contains" in condition:
+                    contains_queries.append(condition["$contains"])
+            
+            if contains_queries:
+                # Combine multiple $contains with AND
+                return {
+                    "query_string": {
+                        "fields": ["document"],
+                        "query": " ".join(contains_queries)
+                    }
+                }
+        
+        # Handle $or with $contains
+        if "$or" in where_document:
+            or_conditions = where_document["$or"]
+            contains_queries = []
+            for condition in or_conditions:
+                if isinstance(condition, dict) and "$contains" in condition:
+                    contains_queries.append(condition["$contains"])
+            
+            if contains_queries:
+                # Combine multiple $contains with OR
+                return {
+                    "query_string": {
+                        "fields": ["document"],
+                        "query": " OR ".join(contains_queries)
+                    }
+                }
+        
+        # Default: if it's a string, treat as $contains
+        if isinstance(where_document, str):
+            return {
+                "query_string": {
+                    "fields": ["document"],
+                    "query": where_document
+                }
+            }
+        
+        return None
+    
+    def _build_metadata_filter_for_search_parm(self, where: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Build metadata filter conditions for search_parm using JSON_EXTRACT format
+        
+        Args:
+            where: Metadata filter conditions
+            
+        Returns:
+            List of filter conditions in search_parm format
+            Format: {"term": {"(JSON_EXTRACT(metadata, '$.field_name'))": "value"}}
+            or {"range": {"(JSON_EXTRACT(metadata, '$.field_name'))": {"gte": 30, "lte": 90}}}
+        """
+        if not where:
+            return []
+        
+        return self._build_metadata_filter_conditions(where)
+    
+    def _build_metadata_filter_conditions(self, condition: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """
+        Recursively build metadata filter conditions from nested dictionary
+        
+        Args:
+            condition: Filter condition dictionary
+            
+        Returns:
+            List of filter conditions
+        """
+        if not condition:
+            return []
+        
+        result = []
+        
+        # Handle logical operators
+        if "$and" in condition:
+            must_conditions = []
+            for sub_condition in condition["$and"]:
+                sub_filters = self._build_metadata_filter_conditions(sub_condition)
+                must_conditions.extend(sub_filters)
+            if must_conditions:
+                result.append({"bool": {"must": must_conditions}})
+            return result
+        
+        if "$or" in condition:
+            should_conditions = []
+            for sub_condition in condition["$or"]:
+                sub_filters = self._build_metadata_filter_conditions(sub_condition)
+                should_conditions.extend(sub_filters)
+            if should_conditions:
+                result.append({"bool": {"should": should_conditions}})
+            return result
+        
+        if "$not" in condition:
+            not_filters = self._build_metadata_filter_conditions(condition["$not"])
+            if not_filters:
+                result.append({"bool": {"must_not": not_filters}})
+            return result
+        
+        # Handle field conditions
+        for key, value in condition.items():
+            if key in ["$and", "$or", "$not"]:
+                continue
+            
+            # Build field name with JSON_EXTRACT format
+            field_name = f"(JSON_EXTRACT(metadata, '$.{key}'))"
+            
+            if isinstance(value, dict):
+                # Handle comparison operators
+                range_conditions = {}
+                term_value = None
+                
+                for op, op_value in value.items():
+                    if op == "$eq":
+                        term_value = op_value
+                    elif op == "$ne":
+                        # $ne should be in must_not
+                        result.append({"bool": {"must_not": [{"term": {field_name: op_value}}]}})
+                    elif op == "$lt":
+                        range_conditions["lt"] = op_value
+                    elif op == "$lte":
+                        range_conditions["lte"] = op_value
+                    elif op == "$gt":
+                        range_conditions["gt"] = op_value
+                    elif op == "$gte":
+                        range_conditions["gte"] = op_value
+                    elif op == "$in":
+                        # For $in, create multiple term queries wrapped in should
+                        in_conditions = [{"term": {field_name: val}} for val in op_value]
+                        if in_conditions:
+                            result.append({"bool": {"should": in_conditions}})
+                    elif op == "$nin":
+                        # For $nin, create multiple term queries wrapped in must_not
+                        nin_conditions = [{"term": {field_name: val}} for val in op_value]
+                        if nin_conditions:
+                            result.append({"bool": {"must_not": nin_conditions}})
+                
+                if range_conditions:
+                    result.append({"range": {field_name: range_conditions}})
+                elif term_value is not None:
+                    result.append({"term": {field_name: term_value}})
+            else:
+                # Direct equality
+                result.append({"term": {field_name: value}})
+        
+        return result
+    
+    def _build_knn_expression(self, knn: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Build knn expression from knn dict
+        
+        Args:
+            knn: Vector search configuration dict
+            
+        Returns:
+            knn expression dict with optional filter
+        """
+        query_texts = knn.get("query_texts")
+        query_embeddings = knn.get("query_embeddings")
+        where = knn.get("where")
+        n_results = knn.get("n_results", 10)
+        
+        # Get query vector
+        query_vector = None
+        if query_embeddings:
+            # Use provided embeddings
+            if isinstance(query_embeddings, list) and len(query_embeddings) > 0:
+                if isinstance(query_embeddings[0], list):
+                    query_vector = query_embeddings[0]  # Use first vector
+                else:
+                    query_vector = query_embeddings
+        elif query_texts:
+            # Convert text to embedding
+            try:
+                texts = query_texts if isinstance(query_texts, list) else [query_texts]
+                embeddings = self._embed_texts(texts[0] if len(texts) > 0 else texts)
+                if embeddings and len(embeddings) > 0:
+                    query_vector = embeddings[0]
+            except NotImplementedError:
+                logger.warning("Text embedding not implemented. Please provide query_embeddings directly.")
+                return None
+        else:
+            logger.warning("knn requires either query_texts or query_embeddings")
+            return None
+        
+        if not query_vector:
+            return None
+        
+        # Build knn expression
+        knn_expr = {
+            "field": "embedding",
+            "k": n_results,
+            "query_vector": query_vector
+        }
+        
+        # Add filter using JSON_EXTRACT format
+        filter_conditions = self._build_metadata_filter_for_search_parm(where)
+        if filter_conditions:
+            knn_expr["filter"] = filter_conditions
+        
+        return knn_expr
+    
+    def _build_source_fields(self, include: Optional[List[str]]) -> List[str]:
+        """Build _source fields list from include parameter"""
+        if not include:
+            return ["document", "metadata", "embedding"]
+        
+        source_fields = []
+        field_mapping = {
+            "documents": "document",
+            "metadatas": "metadata",
+            "embeddings": "embedding"
+        }
+        
+        for field in include:
+            mapped = field_mapping.get(field.lower(), field)
+            if mapped not in source_fields:
+                source_fields.append(mapped)
+        
+        return source_fields if source_fields else ["document", "metadata", "embedding"]
+    
+    def _transform_sql_result(self, result_rows: List[Dict[str, Any]], include: Optional[List[str]]) -> Dict[str, Any]:
+        """
+        Transform SQL query results to standard format
+        
+        Args:
+            result_rows: List of row dictionaries from SQL query
+            include: Fields to include in results (optional)
+            
+        Returns:
+            Standard format dictionary with ids, distances, metadatas, documents, embeddings
+        """
+        if not result_rows:
+            return {
+                "ids": [],
+                "distances": [],
+                "metadatas": [],
+                "documents": [],
+                "embeddings": []
+            }
+        
+        ids = []
+        distances = []
+        metadatas = []
+        documents = []
+        embeddings = []
+        
+        for row in result_rows:
+            # Extract id (may be in different column names)
+            row_id = row.get("id") or row.get("_id") or row.get("ID")
+            ids.append(row_id)
+            
+            # Extract distance/score (may be in different column names)
+            distance = row.get("_distance") or row.get("distance") or row.get("_score") or row.get("score") or row.get("DISTANCE") or row.get("_DISTANCE") or row.get("SCORE") or 0.0
+            distances.append(distance)
+            
+            # Extract metadata
+            if include is None or "metadatas" in include or "metadata" in include:
+                metadata = row.get("metadata") or row.get("METADATA")
+                # Parse JSON string if needed
+                if isinstance(metadata, str):
+                    try:
+                        metadata = json.loads(metadata)
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+                metadatas.append(metadata)
+            else:
+                metadatas.append(None)
+            
+            # Extract document
+            if include is None or "documents" in include or "document" in include:
+                document = row.get("document") or row.get("DOCUMENT")
+                documents.append(document)
+            else:
+                documents.append(None)
+            
+            # Extract embedding
+            if include and ("embeddings" in include or "embedding" in include):
+                embedding = row.get("embedding") or row.get("EMBEDDING")
+                # Parse JSON string or list if needed
+                if isinstance(embedding, str):
+                    try:
+                        embedding = json.loads(embedding)
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+                embeddings.append(embedding)
+            else:
+                embeddings.append(None)
+        
+        return {
+            "ids": ids,
+            "distances": distances,
+            "metadatas": metadatas,
+            "documents": documents,
+            "embeddings": embeddings
+        }
+    
+    def _transform_search_result(self, search_result: Dict[str, Any], include: Optional[List[str]]) -> Dict[str, Any]:
+        """Transform OceanBase search result to standard format"""
+        # OceanBase SEARCH function returns results in a specific format
+        # This needs to be adapted based on actual return format
+        # For now, assuming it returns hits array
+        
+        hits = search_result.get("hits", {}).get("hits", [])
+        
+        ids = []
+        distances = []
+        metadatas = []
+        documents = []
+        embeddings = []
+        
+        for hit in hits:
+            source = hit.get("_source", {})
+            score = hit.get("_score", 0.0)
+            
+            ids.append(hit.get("_id"))
+            distances.append(score)
+            
+            if include is None or "metadatas" in include or "metadata" in include:
+                metadatas.append(source.get("metadata"))
+            else:
+                metadatas.append(None)
+            
+            if include is None or "documents" in include or "document" in include:
+                documents.append(source.get("document"))
+            else:
+                documents.append(None)
+            
+            if include and ("embeddings" in include or "embedding" in include):
+                embeddings.append(source.get("embedding"))
+            else:
+                embeddings.append(None)
+        
+        return {
+            "ids": ids,
+            "distances": distances,
+            "metadatas": metadatas,
+            "documents": documents,
+            "embeddings": embeddings
+        }
     
     # -------------------- Collection Info --------------------
     

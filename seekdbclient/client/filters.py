@@ -216,4 +216,142 @@ class FilterBuilder:
             return combined_clause, all_params
         else:
             return "", []
+    
+    @staticmethod
+    def build_search_filter(where: Optional[Dict[str, Any]]) -> Optional[List[Dict[str, Any]]]:
+        """
+        Build search_params filter format from where condition for hybrid search
+        
+        Args:
+            where: Filter dictionary with operators like $eq, $lt, $gt, $lte, $gte, $ne, $in, $nin, $and, $or, $not
+            
+        Returns:
+            List of filter conditions in search_params format, or None if where is empty
+            
+        Examples:
+            where = {"category": {"$eq": "science"}}
+            -> [{"term": {"metadata.category": {"value": "science"}}}]
+            
+            where = {"$and": [{"page": {"$gte": 5}}, {"page": {"$lte": 10}}]}
+            -> [{"bool": {"must": [{"range": {"metadata.page": {"gte": 5}}}, {"range": {"metadata.page": {"lte": 10}}}]}}]
+        """
+        if not where:
+            return None
+        
+        filter_condition = FilterBuilder._build_search_filter_condition(where)
+        if filter_condition:
+            return [filter_condition]
+        return None
+    
+    @staticmethod
+    def _build_search_filter_condition(condition: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Recursively build search_params filter condition from nested dictionary"""
+        if not condition:
+            return None
+        
+        # Handle logical operators
+        if "$and" in condition:
+            must_conditions = []
+            for sub_condition in condition["$and"]:
+                sub_filter = FilterBuilder._build_search_filter_condition(sub_condition)
+                if sub_filter:
+                    must_conditions.append(sub_filter)
+            if must_conditions:
+                return {"bool": {"must": must_conditions}}
+            return None
+        
+        if "$or" in condition:
+            should_conditions = []
+            for sub_condition in condition["$or"]:
+                sub_filter = FilterBuilder._build_search_filter_condition(sub_condition)
+                if sub_filter:
+                    should_conditions.append(sub_filter)
+            if should_conditions:
+                return {"bool": {"should": should_conditions}}
+            return None
+        
+        if "$not" in condition:
+            not_filter = FilterBuilder._build_search_filter_condition(condition["$not"])
+            if not_filter:
+                return {"bool": {"must_not": [not_filter]}}
+            return None
+        
+        # Handle field conditions
+        result = {"bool": {"must": [], "should": [], "must_not": []}}
+        has_conditions = False
+        
+        for key, value in condition.items():
+            if key in FilterBuilder.LOGICAL_OPS:
+                continue
+            
+            field_name = f"metadata.{key}"
+            
+            if isinstance(value, dict):
+                # Handle comparison operators
+                range_conditions = {}
+                term_conditions = []
+                in_conditions = []
+                nin_conditions = []
+                
+                for op, op_value in value.items():
+                    if op == "$eq":
+                        term_conditions.append({"term": {field_name: {"value": op_value}}})
+                        has_conditions = True
+                    elif op == "$ne":
+                        result["bool"]["must_not"].append({"term": {field_name: {"value": op_value}}})
+                        has_conditions = True
+                    elif op == "$lt":
+                        range_conditions["lt"] = op_value
+                        has_conditions = True
+                    elif op == "$lte":
+                        range_conditions["lte"] = op_value
+                        has_conditions = True
+                    elif op == "$gt":
+                        range_conditions["gt"] = op_value
+                        has_conditions = True
+                    elif op == "$gte":
+                        range_conditions["gte"] = op_value
+                        has_conditions = True
+                    elif op == "$in":
+                        for val in op_value:
+                            in_conditions.append({"term": {field_name: {"value": val}}})
+                        has_conditions = True
+                    elif op == "$nin":
+                        for val in op_value:
+                            nin_conditions.append({"term": {field_name: {"value": val}}})
+                        has_conditions = True
+                
+                if range_conditions:
+                    result["bool"]["must"].append({"range": {field_name: range_conditions}})
+                if term_conditions:
+                    result["bool"]["must"].extend(term_conditions)
+                if in_conditions:
+                    result["bool"]["should"].extend(in_conditions)
+                if nin_conditions:
+                    result["bool"]["must_not"].extend(nin_conditions)
+            else:
+                # Direct equality
+                result["bool"]["must"].append({"term": {field_name: {"value": value}}})
+                has_conditions = True
+        
+        if not has_conditions:
+            return None
+        
+        # Clean up empty arrays
+        if not result["bool"]["must"]:
+            del result["bool"]["must"]
+        if not result["bool"]["should"]:
+            del result["bool"]["should"]
+        if not result["bool"]["must_not"]:
+            del result["bool"]["must_not"]
+        
+        # If only one type of condition, simplify
+        if len(result["bool"]) == 1:
+            key = list(result["bool"].keys())[0]
+            conditions = result["bool"][key]
+            if len(conditions) == 1:
+                return conditions[0]
+            return {"bool": {key: conditions}}
+        
+        return result
 
