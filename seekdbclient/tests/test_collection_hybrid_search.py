@@ -141,8 +141,10 @@ class TestCollectionHybridSearch:
         ]
         
         for data in test_data:
-            # Generate UUID for _id (convert to hex string for varbinary)
-            record_id = str(uuid.uuid4()).replace("-", "")  # Remove dashes to get hex string
+            # Generate UUID for _id (use string format directly)
+            id_str = str(uuid.uuid4())
+            # Escape single quotes in ID
+            id_str_escaped = id_str.replace("'", "''")
             
             # Generate vector with correct dimension
             base_vec = data["base_vector"]
@@ -161,8 +163,9 @@ class TestCollectionHybridSearch:
             # Escape single quotes in document
             document_str = data["document"].replace("'", "\\'")
             
+            # Use CAST to convert string to binary for varbinary(512) field
             sql = f"""INSERT INTO `{table_name}` (_id, document, embedding, metadata) 
-                     VALUES (UNHEX('{record_id}'), '{document_str}', '{vector_str}', '{metadata_str}')"""
+                     VALUES (CAST('{id_str_escaped}' AS BINARY), '{document_str}', '{vector_str}', '{metadata_str}')"""
             client._server.execute(sql)
         
         print(f"   Inserted {len(test_data)} test records (dimension={dimension})")

@@ -46,72 +46,23 @@ class SeekdbEmbeddedClient(BaseClient):
     
     def _ensure_connection(self) -> Any:  # seekdb.Connection
         """Ensure connection is established (internal method)"""
-        # Lazy import seekdb to avoid importing during module load
-        # Note: temporarily remove project root and clean module cache to avoid naming conflict with seekdb C extension (pyseekdb.so)
-        import sys
-        import importlib
-        
-        project_root = "/home/lyl512932/pythonSDK/pyobvector"
-        root_was_in_path = project_root in sys.path
-        
-        # Clean possibly contaminated seekdb module
-        if 'seekdb' in sys.modules:
-            seekdb_mod = sys.modules['seekdb']
-            # Check if contaminated (has our classes)
-            if hasattr(seekdb_mod, 'SeekdbEmbeddedClient'):
-                logger.warning("Detected seekdb module contamination, reloading...")
-                del sys.modules['seekdb']
-        
-        if root_was_in_path:
-            sys.path.remove(project_root)
-        
-        try:
-            import seekdb  # type: ignore
-            
-            # Initialize seekdb module while sys.path still does not contain project root
-            if not self._initialized:
-                # 1. Check if data directory exists
-                if not os.path.exists(self.path):
-                    raise FileNotFoundError(f"SeekDB data directory does not exist: {self.path}")
-                
-                # 2. Ensure seekdb module is properly initialized
-                if not hasattr(seekdb, 'open'):
-                    logger.info("SeekDB module needs initialization, calling _initialize_module()...")
-                    attrs = seekdb._initialize_module()  # type: ignore
-                    logger.info(f"SeekDB initialization complete, loaded {len(attrs)} attributes: {attrs}")
-                    
-                    # Check again
-                    if not hasattr(seekdb, 'open'):
-                        raise RuntimeError(
-                            "SeekDB module initialization failed: missing 'open' method."
-                            "Please ensure seekdb and seekdb-lib are properly installed."
-                        )
-        finally:
-            if root_was_in_path:
-                sys.path.insert(0, project_root)
-        
         if not self._initialized:
             
-            # 3. Switch to data directory and open
-            original_dir = os.getcwd()
+            # 1. open seekdb
             try:
-                os.chdir(self.path)
-                try:
-                    seekdb.open()  # type: ignore
-                    logger.info(f"✅ SeekDB opened: {self.path}")
-                except Exception as e:
-                    if "initialized twice" not in str(e):
-                        raise
-                    logger.debug(f"SeekDB already opened: {e}")
-            finally:
-                os.chdir(original_dir)
+                seekdb.open(db_dir=self.path)  # type: ignore
+                logger.info(f"✅ SeekDB opened: {self.path}")
+            except Exception as e:
+                if "initialized twice" not in str(e):
+                    raise
+                logger.debug(f"SeekDB already opened: {e}")
             
             self._initialized = True
         
-        # 4. Create connection
+        # 3. Create connection
         if self._connection is None:
             self._connection = seekdb.connect(  # type: ignore
-                db_name=self.database,
+                database=self.database,
                 autocommit=self.autocommit
             )
             logger.info(f"✅ Connected to database: {self.database}")

@@ -20,14 +20,14 @@ import seekdbclient
 # ============================================================================
 
 # Option 1: Embedded mode (local SeekDB)
-# embedded_client = seekdbclient.Client(
+# client = seekdbclient.Client(
 #     path="./seekdb",
 #     database="test"
 # )
 
 # Option 2: Server mode (remote SeekDB server)
-server_client = seekdbclient.Client(
-    host="11.161.205.15",
+client = seekdbclient.Client(
+    host="127.0.0.1",
     port=2881,
     database="test",
     user="root",
@@ -43,9 +43,6 @@ server_client = seekdbclient.Client(
 #     user="root",
 #     password=""
 # )
-
-# Use server client for this example
-client = server_client
 
 # ============================================================================
 # PART 2: COLLECTION MANAGEMENT
@@ -412,5 +409,4 @@ except Exception as e:
     print(f"Could not delete 'another_collection': {e}")
 
 # Uncomment to delete main collection
-# client.delete_collection(collection_name)
-
+client.delete_collection(collection_name)
