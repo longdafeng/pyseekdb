@@ -51,13 +51,15 @@ class TestClientCreation:
         test_dimension = 128
         
         # Create collection with HNSW configuration
-        # Note: If embedding_function is None, default embedding function will be used
+        # Note: If embedding_function is not provided, default embedding function will be used
         # and dimension will be automatically updated to 384. We need to use the actual dimension.
+        # To use a specific dimension, we need to set embedding_function=None
         from seekdbclient import HNSWConfiguration
         config = HNSWConfiguration(dimension=test_dimension, distance='cosine')
         collection = client.create_collection(
             name=test_collection_name,
-            configuration=config
+            configuration=config,
+            embedding_function=None
         )
         
         # Verify collection object
@@ -143,7 +145,8 @@ class TestClientCreation:
         # Test 5: get_or_create_collection - should get existing collection
         existing_collection = client.get_or_create_collection(
             name=test_collection_name,
-            configuration=config
+            configuration=config,
+            embedding_function=None
         )
         assert existing_collection is not None
         assert existing_collection.name == test_collection_name
@@ -154,7 +157,8 @@ class TestClientCreation:
         test_collection_name_mgmt = "test_collection_mgmt_" + str(int(time.time()))
         new_collection = client.get_or_create_collection(
             name=test_collection_name_mgmt,
-            configuration=config
+            configuration=config,
+            embedding_function=None
         )
         assert new_collection is not None
         assert new_collection.name == test_collection_name_mgmt

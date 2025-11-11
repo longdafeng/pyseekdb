@@ -42,18 +42,26 @@ OB_PASSWORD = os.environ.get('OB_PASSWORD', '')
 class TestCollectionHybridSearch:
     """Test collection.hybrid_search() interface for all three modes"""
     
-    def _create_test_collection(self, client, collection_name: str, dimension: int = 3):
+    def _create_test_collection(self, client, collection_name: str, dimension: int = None):
         """Helper method to create a test collection"""
         # Use client.create_collection to create the collection
-        # Note: If embedding_function is None, default embedding function will be used
-        # and dimension will be automatically updated to 384. We need to use the actual dimension.
+        # If dimension is not provided, use default embedding function (384 dim)
+        # If dimension is provided, set embedding_function=None to use the specified dimension
         from seekdbclient import HNSWConfiguration
-        config = HNSWConfiguration(dimension=dimension, distance='l2')
-        collection = client.create_collection(
-            name=collection_name,
-            configuration=config
-        )
-        # Return both collection and actual dimension (may be different from requested)
+        if dimension is not None:
+            # Use specified dimension without embedding function
+            config = HNSWConfiguration(dimension=dimension, distance='l2')
+            collection = client.create_collection(
+                name=collection_name,
+                configuration=config,
+                embedding_function=None
+            )
+        else:
+            # Use default configuration and embedding function (auto-calculates dimension)
+            collection = client.create_collection(
+                name=collection_name
+            )
+        # Return both collection and actual dimension
         return collection, collection.dimension
     
     def _generate_query_vector(self, dimension: int, base_vector: List[float] = [1.0, 2.0, 3.0]) -> List[float]:
@@ -204,7 +212,7 @@ class TestCollectionHybridSearch:
         
         # Create test collection
         collection_name = f"test_hybrid_search_{int(time.time())}"
-        collection, actual_dimension = self._create_test_collection(client, collection_name, dimension=3)
+        collection, actual_dimension = self._create_test_collection(client, collection_name)
         
         try:
             # Insert test data
@@ -262,7 +270,7 @@ class TestCollectionHybridSearch:
         
         # Create test collection
         collection_name = f"test_hybrid_search_{int(time.time())}"
-        collection, actual_dimension = self._create_test_collection(client, collection_name, dimension=3)
+        collection, actual_dimension = self._create_test_collection(client, collection_name)
         
         try:
             # Insert test data
@@ -325,7 +333,7 @@ class TestCollectionHybridSearch:
         
         # Create test collection
         collection_name = f"test_hybrid_search_{int(time.time())}"
-        collection, actual_dimension = self._create_test_collection(client, collection_name, dimension=3)
+        collection, actual_dimension = self._create_test_collection(client, collection_name)
         
         try:
             # Insert test data
@@ -387,7 +395,7 @@ class TestCollectionHybridSearch:
         
         # Create test collection
         collection_name = f"test_hybrid_search_{int(time.time())}"
-        collection, actual_dimension = self._create_test_collection(client, collection_name, dimension=3)
+        collection, actual_dimension = self._create_test_collection(client, collection_name)
         
         try:
             # Insert test data
@@ -465,7 +473,7 @@ class TestCollectionHybridSearch:
         
         # Create test collection
         collection_name = f"test_hybrid_search_{int(time.time())}"
-        collection, actual_dimension = self._create_test_collection(client, collection_name, dimension=3)
+        collection, actual_dimension = self._create_test_collection(client, collection_name)
         
         try:
             # Insert test data
@@ -541,7 +549,7 @@ class TestCollectionHybridSearch:
         
         # Create test collection
         collection_name = f"test_hybrid_search_{int(time.time())}"
-        collection, actual_dimension = self._create_test_collection(client, collection_name, dimension=3)
+        collection, actual_dimension = self._create_test_collection(client, collection_name)
         
         try:
             # Insert test data
@@ -598,7 +606,7 @@ class TestCollectionHybridSearch:
         
         # Create test collection
         collection_name = f"test_hybrid_search_{int(time.time())}"
-        collection, actual_dimension = self._create_test_collection(client, collection_name, dimension=3)
+        collection, actual_dimension = self._create_test_collection(client, collection_name)
         
         try:
             # Insert test data
@@ -659,7 +667,7 @@ class TestCollectionHybridSearch:
         
         # Create test collection
         collection_name = f"test_hybrid_search_{int(time.time())}"
-        collection, actual_dimension = self._create_test_collection(client, collection_name, dimension=3)
+        collection, actual_dimension = self._create_test_collection(client, collection_name)
         
         try:
             # Insert test data
@@ -717,7 +725,7 @@ class TestCollectionHybridSearch:
         
         # Create test collection
         collection_name = f"test_hybrid_search_{int(time.time())}"
-        collection, actual_dimension = self._create_test_collection(client, collection_name, dimension=3)
+        collection, actual_dimension = self._create_test_collection(client, collection_name)
         
         try:
             # Insert test data
@@ -789,7 +797,7 @@ class TestCollectionHybridSearch:
         
         # Create test collection
         collection_name = f"test_hybrid_search_{int(time.time())}"
-        collection, actual_dimension = self._create_test_collection(client, collection_name, dimension=3)
+        collection, actual_dimension = self._create_test_collection(client, collection_name)
         
         try:
             # Insert test data
@@ -862,7 +870,7 @@ class TestCollectionHybridSearch:
         
         # Create test collection
         collection_name = f"test_hybrid_search_{int(time.time())}"
-        collection, actual_dimension = self._create_test_collection(client, collection_name, dimension=3)
+        collection, actual_dimension = self._create_test_collection(client, collection_name)
         
         try:
             # Insert test data
@@ -915,7 +923,7 @@ class TestCollectionHybridSearch:
         
         # Create test collection
         collection_name = f"test_hybrid_search_{int(time.time())}"
-        collection, actual_dimension = self._create_test_collection(client, collection_name, dimension=3)
+        collection, actual_dimension = self._create_test_collection(client, collection_name)
         
         try:
             # Insert test data
@@ -969,7 +977,7 @@ class TestCollectionHybridSearch:
         
         # Create test collection
         collection_name = f"test_hybrid_search_{int(time.time())}"
-        collection, actual_dimension = self._create_test_collection(client, collection_name, dimension=3)
+        collection, actual_dimension = self._create_test_collection(client, collection_name)
         
         try:
             # Insert test data
@@ -1026,7 +1034,7 @@ class TestCollectionHybridSearch:
         
         # Create test collection
         collection_name = f"test_hybrid_search_{int(time.time())}"
-        collection, actual_dimension = self._create_test_collection(client, collection_name, dimension=3)
+        collection, actual_dimension = self._create_test_collection(client, collection_name)
         
         try:
             # Insert test data
@@ -1094,7 +1102,7 @@ class TestCollectionHybridSearch:
         
         # Create test collection
         collection_name = f"test_hybrid_search_{int(time.time())}"
-        collection, actual_dimension = self._create_test_collection(client, collection_name, dimension=3)
+        collection, actual_dimension = self._create_test_collection(client, collection_name)
         
         try:
             # Insert test data
