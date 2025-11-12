@@ -84,7 +84,7 @@ class TestCollectionDML:
             test_id_1 = str(uuid.uuid4())
             collection.add(
                 ids=test_id_1,
-                vectors=[1.0, 2.0, 3.0],
+                embeddings=[1.0, 2.0, 3.0],
                 documents="This is test document 1",
                 metadatas={"category": "test", "score": 100}
             )
@@ -102,7 +102,7 @@ class TestCollectionDML:
             test_ids = [str(uuid.uuid4()), str(uuid.uuid4()), str(uuid.uuid4())]
             collection.add(
                 ids=test_ids,
-                vectors=[[2.0, 3.0, 4.0], [3.0, 4.0, 5.0], [4.0, 5.0, 6.0]],
+                embeddings=[[2.0, 3.0, 4.0], [3.0, 4.0, 5.0], [4.0, 5.0, 6.0]],
                 documents=["Document 2", "Document 3", "Document 4"],
                 metadatas=[
                     {"category": "test", "score": 90},
@@ -136,7 +136,7 @@ class TestCollectionDML:
             print(f"✅ Testing collection.upsert() - upsert existing item (update)")
             collection.upsert(
                 ids=test_id_1,
-                vectors=[1.0, 2.0, 3.0],  # Use original vector
+                embeddings=[1.0, 2.0, 3.0],  # Use original vector
                 documents="Upserted document 1",
                 metadatas={"category": "test", "score": 98}
             )
@@ -153,7 +153,7 @@ class TestCollectionDML:
             test_id_new = str(uuid.uuid4())
             collection.upsert(
                 ids=test_id_new,
-                vectors=[5.0, 6.0, 7.0],
+                embeddings=[5.0, 6.0, 7.0],
                 documents="New upserted document",
                 metadatas={"category": "new", "score": 99}
             )
@@ -251,7 +251,7 @@ class TestCollectionDML:
             test_id_1 = str(uuid.uuid4())
             collection.add(
                 ids=test_id_1,
-                vectors=[1.0, 2.0, 3.0],
+                embeddings=[1.0, 2.0, 3.0],
                 documents="This is test document 1",
                 metadatas={"category": "test", "score": 100}
             )
@@ -269,7 +269,7 @@ class TestCollectionDML:
             test_ids = [str(uuid.uuid4()), str(uuid.uuid4()), str(uuid.uuid4())]
             collection.add(
                 ids=test_ids,
-                vectors=[[2.0, 3.0, 4.0], [3.0, 4.0, 5.0], [4.0, 5.0, 6.0]],
+                embeddings=[[2.0, 3.0, 4.0], [3.0, 4.0, 5.0], [4.0, 5.0, 6.0]],
                 documents=["Document 2", "Document 3", "Document 4"],
                 metadatas=[
                     {"category": "test", "score": 90},
@@ -303,7 +303,7 @@ class TestCollectionDML:
             print(f"✅ Testing collection.update() - update multiple items")
             collection.update(
                 ids=test_ids[:2],
-                vectors=[[2.1, 3.1, 4.1], [3.1, 4.1, 5.1]],
+                embeddings=[[2.1, 3.1, 4.1], [3.1, 4.1, 5.1]],
                 metadatas=[
                     {"category": "test", "score": 92},
                     {"category": "test", "score": 87}
@@ -319,7 +319,7 @@ class TestCollectionDML:
             print(f"✅ Testing collection.upsert() - upsert existing item (update)")
             collection.upsert(
                 ids=test_id_1,
-                vectors=[1.0, 2.0, 3.0],  # Use original vector
+                embeddings=[1.0, 2.0, 3.0],  # Use original vector
                 documents="Upserted document 1",
                 metadatas={"category": "test", "score": 98}
             )
@@ -336,7 +336,7 @@ class TestCollectionDML:
             test_id_new = str(uuid.uuid4())
             collection.upsert(
                 ids=test_id_new,
-                vectors=[5.0, 6.0, 7.0],
+                embeddings=[5.0, 6.0, 7.0],
                 documents="New upserted document",
                 metadatas={"category": "new", "score": 99}
             )
@@ -379,7 +379,7 @@ class TestCollectionDML:
             test_id_doc = str(uuid.uuid4())
             collection.add(
                 ids=test_id_doc,
-                vectors=[6.0, 7.0, 8.0],
+                embeddings=[6.0, 7.0, 8.0],
                 documents="Delete this document",
                 metadatas={"category": "temp"}
             )
@@ -454,7 +454,7 @@ class TestCollectionDML:
             test_id_1 = str(uuid.uuid4())
             collection.add(
                 ids=test_id_1,
-                vectors=[1.0, 2.0, 3.0],
+                embeddings=[1.0, 2.0, 3.0],
                 documents="This is test document 1",
                 metadatas={"category": "test", "score": 100}
             )
@@ -472,7 +472,7 @@ class TestCollectionDML:
             test_ids = [str(uuid.uuid4()), str(uuid.uuid4()), str(uuid.uuid4())]
             collection.add(
                 ids=test_ids,
-                vectors=[[2.0, 3.0, 4.0], [3.0, 4.0, 5.0], [4.0, 5.0, 6.0]],
+                embeddings=[[2.0, 3.0, 4.0], [3.0, 4.0, 5.0], [4.0, 5.0, 6.0]],
                 documents=["Document 2", "Document 3", "Document 4"],
                 metadatas=[
                     {"category": "test", "score": 90},
@@ -506,7 +506,7 @@ class TestCollectionDML:
             print(f"✅ Testing collection.update() - update multiple items with vectors")
             collection.update(
                 ids=test_ids[:2],
-                vectors=[[2.1, 3.1, 4.1], [3.1, 4.1, 5.1]],
+                embeddings=[[2.1, 3.1, 4.1], [3.1, 4.1, 5.1]],
                 metadatas=[
                     {"category": "test", "score": 92},
                     {"category": "test", "score": 87}
@@ -522,7 +522,7 @@ class TestCollectionDML:
             print(f"✅ Testing collection.upsert() - upsert existing item (update)")
             collection.upsert(
                 ids=test_id_1,
-                vectors=[1.0, 2.0, 3.0],  # Use original vector
+                embeddings=[1.0, 2.0, 3.0],  # Use original vector
                 documents="Upserted document 1",
                 metadatas={"category": "test", "score": 98}
             )
@@ -539,7 +539,7 @@ class TestCollectionDML:
             test_id_new = str(uuid.uuid4())
             collection.upsert(
                 ids=test_id_new,
-                vectors=[5.0, 6.0, 7.0],
+                embeddings=[5.0, 6.0, 7.0],
                 documents="New upserted document",
                 metadatas={"category": "new", "score": 99}
             )
@@ -572,7 +572,7 @@ class TestCollectionDML:
             test_id_score = str(uuid.uuid4())
             collection.add(
                 ids=test_id_score,
-                vectors=[7.0, 8.0, 9.0],
+                embeddings=[7.0, 8.0, 9.0],
                 documents="High score document",
                 metadatas={"category": "test", "score": 99}
             )
@@ -591,7 +591,7 @@ class TestCollectionDML:
             test_id_doc = str(uuid.uuid4())
             collection.add(
                 ids=test_id_doc,
-                vectors=[6.0, 7.0, 8.0],
+                embeddings=[6.0, 7.0, 8.0],
                 documents="Delete this document",
                 metadatas={"category": "temp"}
             )

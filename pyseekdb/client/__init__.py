@@ -71,7 +71,7 @@ def Client(
     port: Optional[int] = None,
     database: str = "test",
     user: Optional[str] = None,
-    password: str = "",
+    password: str = "", # Can be retrieved from SEEKDB_PASSWORD environment variable
     **kwargs
 ) -> _ClientProxy:
     """
@@ -92,7 +92,7 @@ def Client(
         port: server port (server mode)
         database: database name
         user: username (server mode)
-        password: password (server mode)
+        password: password (server mode). If not provided, will be retrieved from SEEKDB_PASSWORD environment variable
         **kwargs: other parameters
     
     Returns:
@@ -116,6 +116,10 @@ def Client(
         ...     password="pass"
         ... )
     """
+    # Get password from environment variable if not provided
+    if not password:
+        password = os.environ.get("SEEKDB_PASSWORD", "")
+    
     # Determine mode and create appropriate server
     if path is not None:
         # Embedded mode
@@ -165,7 +169,7 @@ def OBClient(
     tenant: str = "test",
     database: str = "test",
     user: str = "root",
-    password: str = "",
+    password: str = "", # Can be retrieved from OB_PASSWORD environment variable
     **kwargs
 ) -> _ClientProxy:
     """
@@ -180,7 +184,7 @@ def OBClient(
         tenant: tenant name
         database: database name
         user: username (without tenant suffix)
-        password: password
+        password: password. If not provided, will be retrieved from OB_PASSWORD environment variable
         **kwargs: other parameters
     
     Returns:
@@ -198,6 +202,10 @@ def OBClient(
         >>> client.create_collection("my_collection")  # ✅ Available
         >>> # client.create_database("new_db")  # ❌ Not available
     """
+    # Get password from environment variable if not provided
+    if not password:
+        password = os.environ.get("OB_PASSWORD", "")
+    
     logger.info(
         f"Creating OceanBase client: {user}@{tenant}@{host}:{port}/{database}"
     )
@@ -221,7 +229,7 @@ def AdminClient(
     host: Optional[str] = None,
     port: Optional[int] = None,
     user: Optional[str] = None,
-    password: str = "",
+    password: str = "", # Can be retrieved from SEEKDB_PASSWORD environment variable
     **kwargs
 ) -> _AdminClientProxy:
     """
@@ -239,7 +247,7 @@ def AdminClient(
         host: server address (server mode)
         port: server port (server mode)
         user: username (server mode)
-        password: password (server mode)
+        password: password (server mode). If not provided, will be retrieved from SEEKDB_PASSWORD environment variable
         **kwargs: other parameters
     
     Returns:
@@ -259,6 +267,10 @@ def AdminClient(
         ...     password="pass"
         ... )
     """
+    # Get password from environment variable if not provided
+    if not password:
+        password = os.environ.get("SEEKDB_PASSWORD", "")
+    
     # Determine mode and create appropriate server
     if path is not None:
         # Embedded mode
@@ -302,7 +314,7 @@ def OBAdminClient(
     port: int = 2881,
     tenant: str = "test",
     user: str = "root",
-    password: str = "",
+    password: str = "", # Can be retrieved from OB_PASSWORD environment variable
     **kwargs
 ) -> _AdminClientProxy:
     """
@@ -316,7 +328,7 @@ def OBAdminClient(
         port: server port (default 2881)
         tenant: tenant name
         user: username (without tenant suffix)
-        password: password
+        password: password. If not provided, will be retrieved from OB_PASSWORD environment variable
         **kwargs: other parameters
     
     Returns:
@@ -333,6 +345,10 @@ def OBAdminClient(
         >>> admin.create_database("new_db")  # ✅ Available
         >>> # admin.create_collection("coll")  # ❌ Not available
     """
+    # Get password from environment variable if not provided
+    if not password:
+        password = os.environ.get("OB_PASSWORD", "")
+    
     logger.info(
         f"Creating OceanBase admin client: {user}@{tenant}@{host}:{port}"
     )

@@ -20,19 +20,19 @@ import pyseekdb
 # ============================================================================
 
 # Option 1: Embedded mode (local SeekDB)
-# client = pyseekdb.Client(
-#     path="./seekdb",
-#     database="test"
-# )
+client = pyseekdb.Client(
+    #path="./seekdb",
+    #database="test"
+)
 
 # Option 2: Server mode (remote SeekDB server)
-client = pyseekdb.Client(
-    host="127.0.0.1",
-    port=2881,
-    database="test",
-    user="root",
-    password=""
-)
+# client = pyseekdb.Client(
+#     host="127.0.0.1",
+#     port=2881,
+#     database="test",
+#     user="root",
+#     password=""
+# )
 
 # Option 3: OceanBase mode
 # ob_client = pyseekdb.OBClient(
@@ -107,7 +107,7 @@ single_id = str(uuid.uuid4())
 collection.add(
     ids=single_id,
     documents="This is a single document",
-    vectors=[random.random() for _ in range(dimension)],
+    embeddings=[random.random() for _ in range(dimension)],
     metadatas={"type": "single", "category": "test"}
 )
 
@@ -115,7 +115,7 @@ collection.add(
 collection.add(
     ids=ids,
     documents=documents,
-    vectors=vectors,
+    embeddings=vectors,
     metadatas=[
         {"category": "AI", "score": 95, "tag": "ml", "year": 2023},
         {"category": "Programming", "score": 88, "tag": "python", "year": 2022},
@@ -132,7 +132,7 @@ collection.add(
 vector_only_ids = [str(uuid.uuid4()) for _ in range(2)]
 collection.add(
     ids=vector_only_ids,
-    vectors=[[random.random() for _ in range(dimension)] for _ in range(2)],
+    embeddings=[[random.random() for _ in range(dimension)] for _ in range(2)],
     metadatas=[{"type": "vector_only"}, {"type": "vector_only"}]
 )
 
@@ -150,7 +150,7 @@ collection.update(
 collection.update(
     ids=ids[1:3],
     documents=["Updated document 1", "Updated document 2"],
-    vectors=[[random.random() for _ in range(dimension)] for _ in range(2)],
+    embeddings=[[random.random() for _ in range(dimension)] for _ in range(2)],
     metadatas=[
         {"category": "Programming", "score": 95, "updated": True},
         {"category": "Database", "score": 97, "updated": True}
@@ -161,7 +161,7 @@ collection.update(
 new_vectors = [[random.random() for _ in range(dimension)] for _ in range(2)]
 collection.update(
     ids=ids[2:4],
-    vectors=new_vectors
+    embeddings=new_vectors
 )
 
 # ============================================================================
@@ -172,7 +172,7 @@ collection.update(
 collection.upsert(
     ids=ids[0],
     documents="Upserted document (was updated)",
-    vectors=[random.random() for _ in range(dimension)],
+    embeddings=[random.random() for _ in range(dimension)],
     metadatas={"category": "AI", "upserted": True}
 )
 
@@ -181,7 +181,7 @@ new_id = str(uuid.uuid4())
 collection.upsert(
     ids=new_id,
     documents="This is a new document from upsert",
-    vectors=[random.random() for _ in range(dimension)],
+    embeddings=[random.random() for _ in range(dimension)],
     metadatas={"category": "New", "upserted": True}
 )
 
@@ -190,7 +190,7 @@ upsert_ids = [ids[4], str(uuid.uuid4())]  # One existing, one new
 collection.upsert(
     ids=upsert_ids,
     documents=["Upserted doc 1", "Upserted doc 2"],
-    vectors=[[random.random() for _ in range(dimension)] for _ in range(2)],
+    embeddings=[[random.random() for _ in range(dimension)] for _ in range(2)],
     metadatas=[{"upserted": True}, {"upserted": True}]
 )
 
