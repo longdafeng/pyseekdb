@@ -18,19 +18,19 @@ from pyseekdb import DefaultEmbeddingFunction
 # For this example, we'll use server mode (you can change to embedded or OceanBase)
 
 # Server mode (connecting to remote SeekDB server)
-client = pyseekdb.Client(
-    host="127.0.0.1",
-    port=2881,
-    database="test",
-    user="root",
-    password=""
-)
+# client = pyseekdb.Client(
+#     host="127.0.0.1",
+#     port=2881,
+#     database="test",
+#     user="root",
+#     password=""
+# )
 
 # Alternative: Embedded mode (local SeekDB)
-# client = pyseekdb.Client(
-#     path="./seekdb",
-#     database="test"
-# )
+client = pyseekdb.Client(
+    #path="./seekdb.db",
+    #database="test"
+)
 
 # Alternative: OceanBase mode
 # client = pyseekdb.OBClient(
@@ -50,7 +50,7 @@ collection_name = "my_simple_collection"
 # The embedding function will automatically convert documents to vectors
 collection = client.create_collection(
     name=collection_name,
-    embedding_function=DefaultEmbeddingFunction()  # Uses default model (384 dimensions)
+    #embedding_function=DefaultEmbeddingFunction()  # Uses default model (384 dimensions)
 )
 
 print(f"Created collection '{collection_name}' with dimension: {collection.dimension}")

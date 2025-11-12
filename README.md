@@ -63,7 +63,24 @@ client = pyseekdb.Client(
     port=2881,              # Server port (default: 2881)
     database="demo",        # Database name
     user="root",            # Username (default: "root")
-    password=""             # Password
+    password=""             # Password (can be retrieved from SEEKDB_PASSWORD environment variable)
+)
+```
+
+**Note:** If the `password` parameter is not provided (empty string), the client will automatically retrieve it from the `SEEKDB_PASSWORD` environment variable. This is useful for keeping passwords out of your code:
+
+```bash
+export SEEKDB_PASSWORD="your_password"
+```
+
+```python
+# Password will be automatically retrieved from SEEKDB_PASSWORD environment variable
+client = pyseekdb.Client(
+    host="127.0.0.1",
+    port=2881,
+    database="demo",
+    user="root"
+    # password parameter omitted - will use SEEKDB_PASSWORD from environment
 )
 ```
 
@@ -81,7 +98,25 @@ client = pyseekdb.OBClient(
     tenant="mysql",         # Tenant name
     database="test",        # Database name
     user="root",            # Username
-    password=""             # Password
+    password=""             # Password (can be retrieved from OB_PASSWORD environment variable)
+)
+```
+
+**Note:** If the `password` parameter is not provided (empty string), the client will automatically retrieve it from the `OB_PASSWORD` environment variable. This is useful for keeping passwords out of your code:
+
+```bash
+export OB_PASSWORD="your_password"
+```
+
+```python
+# Password will be automatically retrieved from OB_PASSWORD environment variable
+client = pyseekdb.OBClient(
+    host="127.0.0.1",
+    port=11402,
+    tenant="mysql",
+    database="test",
+    user="root"
+    # password parameter omitted - will use OB_PASSWORD from environment
 )
 ```
 
@@ -120,7 +155,7 @@ admin = pyseekdb.AdminClient(
     host="127.0.0.1",
     port=2881,
     user="root",
-    password=""
+    password=""  # Can be retrieved from SEEKDB_PASSWORD environment variable
 )
 
 # Use context manager
@@ -152,7 +187,7 @@ admin = pyseekdb.OBAdminClient(
     port=11402,
     tenant="mysql",        # Tenant name
     user="root",
-    password=""
+    password=""  # Can be retrieved from OB_PASSWORD environment variable
 )
 
 # Use context manager
@@ -240,7 +275,7 @@ collection = client.create_collection(
     embedding_function=ef
 )
 
-# Create a collection without embedding function (vectors must be provided manually)
+# Create a collection without embedding function (embeddings must be provided manually)
 collection = client.create_collection(
     name="my_collection",
     configuration=HNSWConfiguration(dimension=128, distance='cosine'),
@@ -260,7 +295,7 @@ collection = client.get_or_create_collection(
 - `configuration` (HNSWConfiguration, optional): Index configuration with dimension and distance metric
   - If not provided, uses default (dimension=384, distance='cosine')
   - If set to `None`, dimension will be calculated from `embedding_function`
-- `embedding_function` (EmbeddingFunction, optional): Function to convert documents to vectors
+- `embedding_function` (EmbeddingFunction, optional): Function to convert documents to embeddings
   - If not provided, uses `DefaultEmbeddingFunction()` (384 dimensions)
   - If set to `None`, collection will not have an embedding function
   - If provided, the dimension will be automatically calculated and validated against `configuration.dimension`
@@ -290,7 +325,7 @@ if client.has_collection("my_collection"):
 - `embedding_function` (EmbeddingFunction, optional): Embedding function to use for this collection
   - If not provided, uses `DefaultEmbeddingFunction()` by default
   - If set to `None`, collection will not have an embedding function
-  - **Important:** The embedding function set here will be used for all operations on this collection (add, upsert, update, query, hybrid_search) when documents/texts are provided without vectors
+  - **Important:** The embedding function set here will be used for all operations on this collection (add, upsert, update, query, hybrid_search) when documents/texts are provided without embeddings
 
 ### 3.3 Listing Collections
 
@@ -341,25 +376,25 @@ The `add()` method inserts new records into a collection. If a record with the s
 
 **Behavior with Embedding Function:**
 
-1. **If `vectors` are provided:** Vectors are used directly, `embedding_function` is NOT called (even if provided)
-2. **If `vectors` are NOT provided but `documents` are provided:**
-   - If collection has an `embedding_function` (set during creation or retrieval), it will automatically generate vectors from documents
+1. **If `embeddings` are provided:** Embeddings are used directly, `embedding_function` is NOT called (even if provided)
+2. **If `embeddings` are NOT provided but `documents` are provided:**
+   - If collection has an `embedding_function` (set during creation or retrieval), it will automatically generate embeddings from documents
    - If collection does NOT have an `embedding_function`, a `ValueError` will be raised
-3. **If neither `vectors` nor `documents` are provided:** A `ValueError` will be raised
+3. **If neither `embeddings` nor `documents` are provided:** A `ValueError` will be raised
 
 ```python
-# Add single item with vectors (embedding_function not used)
+# Add single item with embeddings (embedding_function not used)
 collection.add(
     ids="item1",
-    vectors=[0.1, 0.2, 0.3],
+    embeddings=[0.1, 0.2, 0.3],
     documents="This is a document",
     metadatas={"category": "AI", "score": 95}
 )
 
-# Add multiple items with vectors (embedding_function not used)
+# Add multiple items with embeddings (embedding_function not used)
 collection.add(
     ids=["item1", "item2", "item3"],
-    vectors=[
+    embeddings=[
         [0.1, 0.2, 0.3],
         [0.4, 0.5, 0.6],
         [0.7, 0.8, 0.9]
@@ -376,29 +411,29 @@ collection.add(
     ]
 )
 
-# Add with only vectors (no documents)
+# Add with only embeddings (no documents)
 collection.add(
     ids=["vec1", "vec2"],
-    vectors=[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]
+    embeddings=[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]
 )
 
-# Add with only documents - vectors auto-generated by embedding_function
+# Add with only documents - embeddings auto-generated by embedding_function
 # Requires: collection must have embedding_function set
 collection.add(
     ids=["doc1", "doc2"],
     documents=["Text document 1", "Text document 2"],
     metadatas=[{"tag": "A"}, {"tag": "B"}]
 )
-# The collection's embedding_function will automatically convert documents to vectors
+# The collection's embedding_function will automatically convert documents to embeddings
 ```
 
 **Parameters:**
 - `ids` (str or List[str]): Single ID or list of IDs (required)
-- `vectors` (List[float] or List[List[float]], optional): Single vector or list of vectors
+- `embeddings` (List[float] or List[List[float]], optional): Single embedding or list of embeddings
   - If provided, used directly (embedding_function is ignored)
   - If not provided, must provide `documents` and collection must have `embedding_function`
 - `documents` (str or List[str], optional): Single document or list of documents
-  - If `vectors` not provided, `documents` will be converted to vectors using collection's `embedding_function`
+  - If `embeddings` not provided, `documents` will be converted to embeddings using collection's `embedding_function`
 - `metadatas` (dict or List[dict], optional): Single metadata dict or list of metadata dicts
 
 **Note:** The `embedding_function` used is the one associated with the collection (set during `create_collection()` or `get_collection()`). You cannot override it per-operation.
@@ -409,11 +444,11 @@ The `update()` method updates existing records in a collection. Records must exi
 
 **Behavior with Embedding Function:**
 
-1. **If `vectors` are provided:** Vectors are used directly, `embedding_function` is NOT called
-2. **If `vectors` are NOT provided but `documents` are provided:**
-   - If collection has an `embedding_function`, it will automatically generate vectors from documents
+1. **If `embeddings` are provided:** Embeddings are used directly, `embedding_function` is NOT called
+2. **If `embeddings` are NOT provided but `documents` are provided:**
+   - If collection has an `embedding_function`, it will automatically generate embeddings from documents
    - If collection does NOT have an `embedding_function`, a `ValueError` will be raised
-3. **If neither `vectors` nor `documents` are provided:** Only metadata will be updated (metadata-only update is allowed)
+3. **If neither `embeddings` nor `documents` are provided:** Only metadata will be updated (metadata-only update is allowed)
 
 ```python
 # Update single item - metadata only (embedding_function not used)
@@ -422,38 +457,38 @@ collection.update(
     metadatas={"category": "AI", "score": 98}  # Update metadata only
 )
 
-# Update multiple items with vectors (embedding_function not used)
+# Update multiple items with embeddings (embedding_function not used)
 collection.update(
     ids=["item1", "item2"],
-    vectors=[[0.9, 0.8, 0.7], [0.6, 0.5, 0.4]],  # Update vectors
+    embeddings=[[0.9, 0.8, 0.7], [0.6, 0.5, 0.4]],  # Update embeddings
     documents=["Updated document 1", "Updated document 2"]  # Update documents
 )
 
-# Update with documents only - vectors auto-generated by embedding_function
+# Update with documents only - embeddings auto-generated by embedding_function
 # Requires: collection must have embedding_function set
 collection.update(
     ids="item1",
-    documents="New document text",  # Vectors will be auto-generated
+    documents="New document text",  # Embeddings will be auto-generated
     metadatas={"category": "AI"}
 )
 
-# Update specific fields - only document (vectors auto-generated)
+# Update specific fields - only document (embeddings auto-generated)
 collection.update(
     ids="item1",
-    documents="New document text"  # Only update document, vectors auto-generated
+    documents="New document text"  # Only update document, embeddings auto-generated
 )
 ```
 
 **Parameters:**
 - `ids` (str or List[str]): Single ID or list of IDs to update (required)
-- `vectors` (List[float] or List[List[float]], optional): New vectors
+- `embeddings` (List[float] or List[List[float]], optional): New embeddings
   - If provided, used directly (embedding_function is ignored)
-  - If not provided, can provide `documents` to auto-generate vectors
+  - If not provided, can provide `documents` to auto-generate embeddings
 - `documents` (str or List[str], optional): New documents
-  - If `vectors` not provided, `documents` will be converted to vectors using collection's `embedding_function`
+  - If `embeddings` not provided, `documents` will be converted to embeddings using collection's `embedding_function`
 - `metadatas` (dict or List[dict], optional): New metadata
 
-**Note:** Metadata-only updates (no vectors, no documents) are allowed. The `embedding_function` used is the one associated with the collection.
+**Note:** Metadata-only updates (no embeddings, no documents) are allowed. The `embedding_function` used is the one associated with the collection.
 
 ### 4.3 Upsert Data
 
@@ -461,25 +496,25 @@ The `upsert()` method inserts new records or updates existing ones. If a record 
 
 **Behavior with Embedding Function:**
 
-1. **If `vectors` are provided:** Vectors are used directly, `embedding_function` is NOT called
-2. **If `vectors` are NOT provided but `documents` are provided:**
-   - If collection has an `embedding_function`, it will automatically generate vectors from documents
+1. **If `embeddings` are provided:** Embeddings are used directly, `embedding_function` is NOT called
+2. **If `embeddings` are NOT provided but `documents` are provided:**
+   - If collection has an `embedding_function`, it will automatically generate embeddings from documents
    - If collection does NOT have an `embedding_function`, a `ValueError` will be raised
-3. **If neither `vectors` nor `documents` are provided:** Only metadata will be upserted (metadata-only upsert is allowed)
+3. **If neither `embeddings` nor `documents` are provided:** Only metadata will be upserted (metadata-only upsert is allowed)
 
 ```python
-# Upsert single item with vectors (embedding_function not used)
+# Upsert single item with embeddings (embedding_function not used)
 collection.upsert(
     ids="item1",
-    vectors=[0.1, 0.2, 0.3],
+    embeddings=[0.1, 0.2, 0.3],
     documents="Document text",
     metadatas={"category": "AI", "score": 95}
 )
 
-# Upsert multiple items with vectors (embedding_function not used)
+# Upsert multiple items with embeddings (embedding_function not used)
 collection.upsert(
     ids=["item1", "item2", "item3"],
-    vectors=[
+    embeddings=[
         [0.1, 0.2, 0.3],
         [0.4, 0.5, 0.6],
         [0.7, 0.8, 0.9]
@@ -492,26 +527,26 @@ collection.upsert(
     ]
 )
 
-# Upsert with documents only - vectors auto-generated by embedding_function
+# Upsert with documents only - embeddings auto-generated by embedding_function
 # Requires: collection must have embedding_function set
 collection.upsert(
     ids=["item1", "item2"],
     documents=["Document 1", "Document 2"],
     metadatas=[{"category": "AI"}, {"category": "ML"}]
 )
-# The collection's embedding_function will automatically convert documents to vectors
+# The collection's embedding_function will automatically convert documents to embeddings
 ```
 
 **Parameters:**
 - `ids` (str or List[str]): Single ID or list of IDs (required)
-- `vectors` (List[float] or List[List[float]], optional): Vectors
+- `embeddings` (List[float] or List[List[float]], optional): Embeddings
   - If provided, used directly (embedding_function is ignored)
-  - If not provided, can provide `documents` to auto-generate vectors
+  - If not provided, can provide `documents` to auto-generate embeddings
 - `documents` (str or List[str], optional): Documents
-  - If `vectors` not provided, `documents` will be converted to vectors using collection's `embedding_function`
+  - If `embeddings` not provided, `documents` will be converted to embeddings using collection's `embedding_function`
 - `metadatas` (dict or List[dict], optional): Metadata
 
-**Note:** Metadata-only upserts (no vectors, no documents) are allowed. The `embedding_function` used is the one associated with the collection.
+**Note:** Metadata-only upserts (no embeddings, no documents) are allowed. The `embedding_function` used is the one associated with the collection.
 
 ### 4.4 Delete Data
 
@@ -559,7 +594,7 @@ The `query()` method performs vector similarity search to find the most similar 
 
 1. **If `query_embeddings` are provided:** Vectors are used directly, `embedding_function` is NOT called
 2. **If `query_embeddings` are NOT provided but `query_texts` are provided:**
-   - If collection has an `embedding_function`, it will automatically generate query vectors from texts
+   - If collection has an `embedding_function`, it will automatically generate query embeddings from texts
    - If collection does NOT have an `embedding_function`, a `ValueError` will be raised
 3. **If neither `query_embeddings` nor `query_texts` are provided:** A `ValueError` will be raised
 
@@ -578,7 +613,7 @@ for i in range(len(results["ids"][0])):
     if results.get("metadatas"):
         print(f"Metadata: {results['metadatas'][0][i]}")
 
-# Query by texts - vectors auto-generated by embedding_function
+# Query by texts - embeddings auto-generated by embedding_function
 # Requires: collection must have embedding_function set
 results = collection.query(
     query_texts=["my query text"],
@@ -624,12 +659,12 @@ results = collection.query(
     n_results=5
 )
 
-# Query with multiple vectors (batch query)
+# Query with multiple embeddings (batch query)
 results = collection.query(
     query_embeddings=[[1.0, 2.0, 3.0], [2.0, 3.0, 4.0]],
     n_results=2
 )
-# Returns dict with lists of lists, one list per query vector
+# Returns dict with lists of lists, one list per query embedding
 for i in range(len(results["ids"])):
     print(f"Query {i}: {len(results['ids'][i])} results")
 
@@ -642,11 +677,11 @@ results = collection.query(
 ```
 
 **Parameters:**
-- `query_embeddings` (List[float] or List[List[float]], optional): Single vector or list of vectors for batch queries
+- `query_embeddings` (List[float] or List[List[float]], optional): Single embedding or list of embeddings for batch queries
   - If provided, used directly (embedding_function is ignored)
   - If not provided, must provide `query_texts` and collection must have `embedding_function`
 - `query_texts` (str or List[str], optional): Query text(s) to be embedded
-  - If `query_embeddings` not provided, `query_texts` will be converted to vectors using collection's `embedding_function`
+  - If `query_embeddings` not provided, `query_texts` will be converted to embeddings using collection's `embedding_function`
 - `n_results` (int, required): Number of similar results to return (default: 10)
 - `where` (dict, optional): Metadata filter conditions (see Filter Operators section)
 - `where_document` (dict, optional): Document content filter
@@ -786,7 +821,7 @@ The `hybrid_search()` method combines full-text search and vector similarity sea
 In the `knn` parameter:
 1. **If `query_embeddings` are provided:** Vectors are used directly, `embedding_function` is NOT called
 2. **If `query_embeddings` are NOT provided but `query_texts` are provided:**
-   - If collection has an `embedding_function`, it will automatically generate query vectors from texts
+   - If collection has an `embedding_function`, it will automatically generate query embeddings from texts
    - If collection does NOT have an `embedding_function`, a `ValueError` will be raised
 3. **If neither `query_embeddings` nor `query_texts` are provided in `knn`:** Only full-text search will be performed (if `query` is provided)
 
@@ -844,7 +879,7 @@ results = collection.hybrid_search(
   - `n_results`: Number of results for full-text search
 - `knn` (dict, optional): Vector search configuration with:
   - `query_texts` (str or List[str], optional): Query text(s) to be embedded
-    - If `query_embeddings` not provided, `query_texts` will be converted to vectors using collection's `embedding_function`
+    - If `query_embeddings` not provided, `query_texts` will be converted to embeddings using collection's `embedding_function`
   - `query_embeddings` (List[float] or List[List[float]], optional): Query vector(s)
     - If provided, used directly (embedding_function is ignored)
   - `where`: Metadata filter conditions (optional)
@@ -1318,11 +1353,11 @@ collection = client.get_collection("my_collection", embedding_function=ef)
 # Use the collection - documents will be automatically embedded
 collection.add(
     ids=["doc1", "doc2"],
-    documents=["Document 1", "Document 2"],  # Vectors auto-generated
+    documents=["Document 1", "Document 2"],  # Embeddings auto-generated
     metadatas=[{"tag": "A"}, {"tag": "B"}]
 )
 
-# Query with texts - query vectors auto-generated
+# Query with texts - query embeddings auto-generated
 results = collection.query(
     query_texts=["my query"],
     n_results=10
@@ -1346,6 +1381,23 @@ python3 -m pytest pyseekdb/tests/test_client_creation.py -v
 ```
 
 ### Environment Variables (Optional)
+
+#### Password Environment Variables
+
+For security purposes, you can set passwords via environment variables instead of passing them directly in code:
+
+- **`SEEKDB_PASSWORD`**: Password for SeekDB server connections (used by `Client()` and `AdminClient()` when `password` parameter is not provided or is empty)
+- **`OB_PASSWORD`**: Password for OceanBase connections (used by `OBClient()` and `OBAdminClient()` when `password` parameter is not provided or is empty)
+
+```bash
+# Set password for SeekDB server connections
+export SEEKDB_PASSWORD="your_seekdb_password"
+
+# Set password for OceanBase connections
+export OB_PASSWORD="your_oceanbase_password"
+```
+
+#### Test Configuration Environment Variables
 
 `test_client_creation.py` honors the following overrides:
 

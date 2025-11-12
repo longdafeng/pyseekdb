@@ -225,7 +225,7 @@ class TestClientCreation:
         vectors = [[random.random() for _ in range(collection.dimension)] for _ in range(3)]
         collection.add(
             ids=test_ids,
-            vectors=vectors,
+            embeddings=vectors,
             documents=[f"Test document {i}" for i in range(3)],
             metadatas=[{"index": i} for i in range(3)]
         )
