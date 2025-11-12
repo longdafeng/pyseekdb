@@ -221,11 +221,11 @@ class TestClientCreation:
         import random
         random.seed(42)  # For reproducibility
         test_ids = [str(uuid.uuid4()) for _ in range(3)]
-        # Generate vectors matching the collection's dimension
-        vectors = [[random.random() for _ in range(collection.dimension)] for _ in range(3)]
+        # Generate embeddings matching the collection's dimension
+        embeddings = [[random.random() for _ in range(collection.dimension)] for _ in range(3)]
         collection.add(
             ids=test_ids,
-            embeddings=vectors,
+            embeddings=embeddings,
             documents=[f"Test document {i}" for i in range(3)],
             metadatas=[{"index": i} for i in range(3)]
         )

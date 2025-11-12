@@ -43,7 +43,7 @@ class Collection:
             name: Collection name
             collection_id: Collection unique identifier (some databases may need this)
             dimension: Vector dimension
-            embedding_function: Embedding function to convert documents to vectors
+            embedding_function: Embedding function to convert documents to embeddings
             distance: Distance metric used by the index (e.g., 'l2', 'cosine', 'inner_product')
             **metadata: Other metadata
         """
@@ -111,24 +111,24 @@ class Collection:
         
         Args:
             ids: Single ID or list of IDs
-            embeddings: Single vector or list of vectors (optional if documents provided and embedding_function is set)
+            embeddings: Single embedding or list of embeddings (optional if documents provided and embedding_function is set)
             metadatas: Single metadata dict or list of metadata dicts (optional)
             documents: Single document or list of documents (optional)
-                       If provided without vectors, embedding_function will be used to generate vectors
+                       If provided without embeddings, embedding_function will be used to generate embeddings
             **kwargs: Additional parameters
             
         Examples:
-            # Add single item with vectors
+            # Add single item with embeddings
             collection.add(ids="1", embeddings=[0.1, 0.2, 0.3], metadatas={"tag": "A"})
             
-            # Add multiple items with vectors
+            # Add multiple items with embeddings
             collection.add(
                 ids=["1", "2", "3"],
                 embeddings=[[0.1, 0.2], [0.3, 0.4], [0.5, 0.6]],
                 metadatas=[{"tag": "A"}, {"tag": "B"}, {"tag": "C"}]
             )
             
-            # Add items with documents (vectors will be auto-generated if embedding_function is set)
+            # Add items with documents (embeddings will be auto-generated if embedding_function is set)
             collection.add(
                 ids=["1", "2"],
                 documents=["Hello world", "How are you?"],
@@ -139,7 +139,7 @@ class Collection:
             collection_id=self._id,
             collection_name=self._name,
             ids=ids,
-            vectors=embeddings,
+            embeddings=embeddings,
             metadatas=metadatas,
             documents=documents,
             embedding_function=self._embedding_function,
@@ -159,7 +159,7 @@ class Collection:
         
         Args:
             ids: Single ID or list of IDs to update
-            embeddings: New vectors (optional)
+            embeddings: New embeddings (optional)
             metadatas: New metadata (optional)
             documents: New documents (optional)
             **kwargs: Additional parameters
@@ -181,7 +181,7 @@ class Collection:
             collection_id=self._id,
             collection_name=self._name,
             ids=ids,
-            vectors=embeddings,
+            embeddings=embeddings,
             metadatas=metadatas,
             documents=documents,
             embedding_function=self._embedding_function,
@@ -202,7 +202,7 @@ class Collection:
         
         Args:
             ids: Single ID or list of IDs
-            embeddings: Vectors (optional if documents provided)
+            embeddings: embeddings (optional if documents provided)
             metadatas: Metadata (optional)
             documents: Documents (optional)
             **kwargs: Additional parameters
@@ -224,7 +224,7 @@ class Collection:
             collection_id=self._id,
             collection_name=self._name,
             ids=ids,
-            vectors=embeddings,
+            embeddings=embeddings,
             metadatas=metadatas,
             documents=documents,
             embedding_function=self._embedding_function,

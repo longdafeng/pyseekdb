@@ -57,7 +57,7 @@ config = HNSWConfiguration(dimension=dimension, distance='cosine')
 collection = client.get_or_create_collection(
     name=collection_name,
     configuration=config,
-    embedding_function=None  # Explicitly set to None since we're using custom 128-dim vectors
+    embedding_function=None  # Explicitly set to None since we're using custom 128-dim embeddings
 )
 
 # 2.2 Check if collection exists
@@ -74,7 +74,7 @@ config2 = HNSWConfiguration(dimension=64, distance='cosine')
 collection2 = client.get_or_create_collection(
     name="another_collection",
     configuration=config2,
-    embedding_function=None  # Explicitly set to None since we're using custom 64-dim vectors
+    embedding_function=None  # Explicitly set to None since we're using custom 64-dim embeddings
 )
 
 # ============================================================================
@@ -94,11 +94,11 @@ documents = [
     "Computer vision enables machines to interpret visual information"
 ]
 
-# Generate vectors (in real usage, use an embedding model)
-vectors = []
+# Generate embeddings (in real usage, use an embedding model)
+embeddings = []
 for i in range(len(documents)):
     vector = [random.random() for _ in range(dimension)]
-    vectors.append(vector)
+    embeddings.append(vector)
 
 ids = [str(uuid.uuid4()) for _ in documents]
 
@@ -115,7 +115,7 @@ collection.add(
 collection.add(
     ids=ids,
     documents=documents,
-    embeddings=vectors,
+    embeddings=embeddings,
     metadatas=[
         {"category": "AI", "score": 95, "tag": "ml", "year": 2023},
         {"category": "Programming", "score": 88, "tag": "python", "year": 2022},
@@ -128,7 +128,7 @@ collection.add(
     ]
 )
 
-# 3.3 Add with only vectors (no documents)
+# 3.3 Add with only embeddings (no documents)
 vector_only_ids = [str(uuid.uuid4()) for _ in range(2)]
 collection.add(
     ids=vector_only_ids,
@@ -157,11 +157,11 @@ collection.update(
     ]
 )
 
-# 4.3 Update vectors
-new_vectors = [[random.random() for _ in range(dimension)] for _ in range(2)]
+# 4.3 Update embeddings
+new_embeddings = [[random.random() for _ in range(dimension)] for _ in range(2)]
 collection.update(
     ids=ids[2:4],
-    embeddings=new_vectors
+    embeddings=new_embeddings
 )
 
 # ============================================================================
@@ -199,7 +199,7 @@ collection.upsert(
 # ============================================================================
 
 # 6.1 Basic vector similarity query
-query_vector = vectors[0]  # Query with first document's vector
+query_vector = embeddings[0]  # Query with first document's vector
 results = collection.query(
     query_embeddings=query_vector,
     n_results=3
@@ -266,10 +266,10 @@ results = collection.query(
     n_results=5
 )
 
-# 6.9 Query with multiple vectors (batch query)
-batch_vectors = [vectors[0], vectors[1]]
+# 6.9 Query with multiple embeddings (batch query)
+batch_embeddings = [embeddings[0], embeddings[1]]
 batch_results = collection.query(
-    query_embeddings=batch_vectors,
+    query_embeddings=batch_embeddings,
     n_results=2
 )
 # batch_results["ids"][0] contains results for first query
@@ -358,7 +358,7 @@ hybrid_results = collection.hybrid_search(
         "n_results": 10
     },
     knn={
-        "query_embeddings": [vectors[0]],
+        "query_embeddings": [embeddings[0]],
         "where": {"year": {"$gte": 2022}},
         "n_results": 10
     },

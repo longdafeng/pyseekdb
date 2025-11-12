@@ -502,8 +502,8 @@ class TestCollectionDML:
             assert results["metadatas"][0].get('updated') is True
             print(f"   Successfully updated and verified item with ID: {test_id_1}")
             
-            # Test 4: collection.update - Update multiple items with vectors
-            print(f"✅ Testing collection.update() - update multiple items with vectors")
+            # Test 4: collection.update - Update multiple items with embeddings
+            print(f"✅ Testing collection.update() - update multiple items with embeddings")
             collection.update(
                 ids=test_ids[:2],
                 embeddings=[[2.1, 3.1, 4.1], [3.1, 4.1, 5.1]],
@@ -516,7 +516,7 @@ class TestCollectionDML:
             # Verify update using collection.get
             results = collection.get(ids=test_ids[:2], include=["embeddings"])
             assert len(results) == 2
-            print(f"   Successfully updated and verified {len(results)} items with vectors")
+            print(f"   Successfully updated and verified {len(results)} items with embeddings")
             
             # Test 5: collection.upsert - Upsert existing item (should update)
             print(f"✅ Testing collection.upsert() - upsert existing item (update)")
