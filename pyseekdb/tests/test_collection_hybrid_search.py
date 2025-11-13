@@ -743,7 +743,7 @@ class TestCollectionHybridSearch:
             # Wait a bit for indexes to be ready
             time.sleep(1)
             
-            # Test: Hybrid search with metadata filter
+            # Test: Hybrid search with metadata filter (simplified equality)
             print(f"\n✅ Testing hybrid_search with metadata filter (SeekdbServer)")
             results = collection.hybrid_search(
                 query={
@@ -752,7 +752,7 @@ class TestCollectionHybridSearch:
                     },
                     "where": {
                         "$and": [
-                            {"category": {"$eq": "AI"}},
+                            {"category": "AI"},
                             {"page": {"$gte": 1}},
                             {"page": {"$lte": 5}}
                         ]
@@ -763,7 +763,7 @@ class TestCollectionHybridSearch:
                     "query_embeddings": self._generate_query_vector(actual_dimension),
                     "where": {
                         "$and": [
-                            {"category": {"$eq": "AI"}},
+                            {"category": "AI"},
                             {"score": {"$gte": 90}}
                         ]
                     },

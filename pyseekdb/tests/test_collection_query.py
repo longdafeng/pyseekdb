@@ -164,11 +164,11 @@ class TestCollectionQuery:
             assert len(results["ids"][0]) > 0
             print(f"   Found {len(results['ids'][0])} results")
             
-            # Test 2: Query with metadata filter
+            # Test 2: Query with metadata filter (simplified equality)
             print(f"✅ Testing query with metadata filter")
             results = collection.query(
                 query_embeddings=query_vector,
-                where={"category": {"$eq": "AI"}},
+                where={"category": "AI"},
                 n_results=5
             )
             assert results is not None

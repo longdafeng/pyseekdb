@@ -477,13 +477,13 @@ class TestCollectionGet:
             assert len(results) > 0
             print(f"   Found {len(results['ids'])} results with category='AI'")
             
-            # Test 4: Get by logical operators ($or)
+            # Test 4: Get by logical operators ($or) with simplified equality
             print(f"✅ Testing get with logical operators ($or)")
             results = collection.get(
                 where={
                     "$or": [
-                        {"category": {"$eq": "AI"}},
-                        {"tag": {"$eq": "python"}}
+                        {"category": "AI"},
+                        {"tag": "python"}
                     ]
                 },
                 limit=10

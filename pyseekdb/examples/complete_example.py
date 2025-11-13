@@ -206,10 +206,10 @@ results = collection.query(
 )
 print(f"Query results: {len(results['ids'][0])} items")
 
-# 6.2 Query with metadata filter
+# 6.2 Query with metadata filter (simplified equality)
 results = collection.query(
     query_embeddings=query_vector,
-    where={"category": {"$eq": "AI"}},
+    where={"category": "AI"},
     n_results=5
 )
 
@@ -227,24 +227,24 @@ results = collection.query(
     n_results=5
 )
 
-# 6.5 Query with logical operators ($or)
+# 6.5 Query with logical operators ($or) - simplified equality
 results = collection.query(
     query_embeddings=query_vector,
     where={
         "$or": [
-            {"category": {"$eq": "AI"}},
-            {"tag": {"$eq": "python"}}
+            {"category": "AI"},
+            {"tag": "python"}
         ]
     },
     n_results=5
 )
 
-# 6.6 Query with logical operators ($and)
+# 6.6 Query with logical operators ($and) - simplified equality
 results = collection.query(
     query_embeddings=query_vector,
     where={
         "$and": [
-            {"category": {"$eq": "AI"}},
+            {"category": "AI"},
             {"score": {"$gte": 90}}
         ]
     },
@@ -258,10 +258,10 @@ results = collection.query(
     n_results=5
 )
 
-# 6.8 Query with combined filters
+# 6.8 Query with combined filters (simplified equality)
 results = collection.query(
     query_embeddings=query_vector,
-    where={"category": {"$eq": "AI"}, "year": {"$gte": 2023}},
+    where={"category": "AI", "year": {"$gte": 2023}},
     where_document={"$contains": "learning"},
     n_results=5
 )
@@ -296,9 +296,9 @@ results = collection.get(ids=ids[:3])
 # results["ids"] contains ids[:3]
 # results["documents"] contains documents for all IDs
 
-# 7.3 Get by metadata filter
+# 7.3 Get by metadata filter (simplified equality)
 results = collection.get(
-    where={"category": {"$eq": "AI"}},
+    where={"category": "AI"},
     limit=5
 )
 
@@ -314,12 +314,12 @@ results = collection.get(
     limit=5
 )
 
-# 7.6 Get with logical operators
+# 7.6 Get with logical operators (simplified equality)
 results = collection.get(
     where={
         "$or": [
-            {"category": {"$eq": "AI"}},
-            {"category": {"$eq": "Programming"}}
+            {"category": "AI"},
+            {"category": "Programming"}
         ]
     },
     limit=5
@@ -354,7 +354,7 @@ all_results = collection.get(limit=100)
 hybrid_results = collection.hybrid_search(
     query={
         "where_document": {"$contains": "machine learning"},
-        "where": {"category": {"$eq": "AI"}},
+        "where": {"category": "AI"},  # Simplified equality
         "n_results": 10
     },
     knn={

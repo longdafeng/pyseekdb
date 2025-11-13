@@ -662,11 +662,13 @@ results = collection.get(ids="123")
 # Get by multiple IDs
 results = collection.get(ids=["1", "2", "3"])
 
-# Get by metadata filter
+# Get by metadata filter (simplified equality - both forms are supported)
 results = collection.get(
-    where={"category": {"$eq": "AI"}},
+    where={"category": "AI"},
     limit=10
 )
+# Or use explicit $eq operator:
+# where={"category": {"$eq": "AI"}}
 
 # Get by comparison operator
 results = collection.get(
@@ -680,12 +682,12 @@ results = collection.get(
     limit=10
 )
 
-# Get by logical operators ($or)
+# Get by logical operators ($or) - simplified equality
 results = collection.get(
     where={
         "$or": [
-            {"category": {"$eq": "AI"}},
-            {"tag": {"$eq": "python"}}
+            {"category": "AI"},
+            {"tag": "python"}
         ]
     },
     limit=10
@@ -856,8 +858,12 @@ results = collection.hybrid_search(
 
 #### Metadata Filters (`where` parameter)
 
-- `$eq`: Equal to
+- `$eq`: Equal to (simplified form is also supported)
   ```python
+  # Simplified form (recommended for equality)
+  where={"category": "AI"}
+  
+  # Explicit $eq operator (also supported)
   where={"category": {"$eq": "AI"}}
   ```
 
@@ -898,22 +904,28 @@ results = collection.hybrid_search(
 
 - `$or`: Logical OR
   ```python
+  # Simplified equality form
   where={
       "$or": [
-          {"category": {"$eq": "AI"}},
-          {"tag": {"$eq": "python"}}
+          {"category": "AI"},
+          {"tag": "python"}
       ]
   }
+  # Or with explicit $eq:
+  # where={"$or": [{"category": {"$eq": "AI"}}, {"tag": {"$eq": "python"}}]}
   ```
 
 - `$and`: Logical AND
   ```python
+  # Simplified equality form
   where={
       "$and": [
-          {"category": {"$eq": "AI"}},
+          {"category": "AI"},
           {"score": {"$gte": 90}}
       ]
   }
+  # Or with explicit $eq:
+  # where={"$and": [{"category": {"$eq": "AI"}}, {"score": {"$gte": 90}}]}
   ```
 
 #### Document Filters (`where_document` parameter)
