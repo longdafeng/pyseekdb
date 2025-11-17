@@ -208,17 +208,24 @@ class BaseClient(BaseConnection, AdminAPI):
         actual_dimension = None
         if embedding_function is not None:
             try:
-                # Call embedding function with "seekdb" to get actual dimension
-                test_embeddings = embedding_function.__call__("seekdb")
-                if test_embeddings and len(test_embeddings) > 0:
-                    actual_dimension = len(test_embeddings[0])
-                    logger.info(f"Calculated embedding function dimension: {actual_dimension}")
+                # First, try to get dimension from the embedding function's dimension property
+                # This avoids initializing the model (e.g., onnxruntime) during collection creation
+                if hasattr(embedding_function, 'dimension'):
+                    actual_dimension = embedding_function.dimension
+                    logger.info(f"Using embedding function dimension: {actual_dimension}")
                 else:
-                    raise ValueError("Embedding function returned empty result when called with 'seekdb'")
+                    # Fallback: if no dimension attribute, call the function to calculate dimension
+                    # This may trigger model initialization, but is necessary for custom embedding functions
+                    test_embeddings = embedding_function.__call__("seekdb")
+                    if test_embeddings and len(test_embeddings) > 0:
+                        actual_dimension = len(test_embeddings[0])
+                        logger.info(f"Calculated embedding function dimension: {actual_dimension}")
+                    else:
+                        raise ValueError("Embedding function returned empty result when called with 'seekdb'")
             except Exception as e:
                 raise ValueError(
-                    f"Failed to calculate dimension from embedding function: {e}. "
-                    f"Please ensure the embedding function can be called with a string input."
+                    f"Failed to get dimension from embedding function: {e}. "
+                    f"Please ensure the embedding function has a 'dimension' attribute or can be called with a string input."
                 ) from e
         
         # Handle configuration

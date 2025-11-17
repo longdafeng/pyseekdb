@@ -54,10 +54,11 @@ class TestDefaultEmbeddingFunction:
             pytest.skip("SeekDB embedded package is not installed")
         
         # Check if sentence-transformers is available
-        try:
-            from sentence_transformers import SentenceTransformer
-        except ImportError:
-            pytest.skip("sentence-transformers is not installed. Install with: pip install sentence-transformers")
+        # try:
+        #     from sentence_transformers import SentenceTransformer
+        # except ImportError:
+        #     # pytest.skip("sentence-transformers is not installed. Install with: pip install sentence-transformers")
+        #     pass
         
         # Create embedded client
         client = pyseekdb.Client(
@@ -212,10 +213,11 @@ class TestDefaultEmbeddingFunction:
     def test_server_default_embedding_function(self):
         """Test default embedding function with server client"""
         # Check if sentence-transformers is available
-        try:
-            from sentence_transformers import SentenceTransformer
-        except ImportError:
-            pytest.skip("sentence-transformers is not installed. Install with: pip install sentence-transformers")
+        # try:
+        #     from sentence_transformers import SentenceTransformer
+        # except ImportError:
+        #     # pytest.skip("sentence-transformers is not installed. Install with: pip install sentence-transformers")
+        #     pass
         
         # Create server client
         client = pyseekdb.Client(
@@ -287,10 +289,11 @@ class TestDefaultEmbeddingFunction:
     def test_oceanbase_default_embedding_function(self):
         """Test default embedding function with OceanBase client"""
         # Check if sentence-transformers is available
-        try:
-            from sentence_transformers import SentenceTransformer
-        except ImportError:
-            pytest.skip("sentence-transformers is not installed. Install with: pip install sentence-transformers")
+        # try:
+        #     from sentence_transformers import SentenceTransformer
+        # except ImportError:
+        #     # pytest.skip("sentence-transformers is not installed. Install with: pip install sentence-transformers")
+        #     pass
         
         # Create OceanBase client
         client = pyseekdb.Client(

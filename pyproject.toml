@@ -16,7 +16,12 @@ repository = "https://github.com/oceanbase/pyseekdb/"
 python = ">=3.8,<4.0"
 pymysql = "^1.1.1"
 pylibseekdb = "*"
-sentence-transformers = {version = "*"}
+onnxruntime = "1.19.0"  # Requires 1.19.0+ to support opset 5 (used by Hugging Face models)
+tokenizers = "0.15.0"  # Fixed version to ensure compatibility
+httpx = "*"
+tqdm = "*"
+tenacity = "*"
+numpy = ">=1.21.0,<1.25.0"  # Limit numpy version, 1.24.4 has best compatibility with onnxruntime 1.19.0
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2.2"
