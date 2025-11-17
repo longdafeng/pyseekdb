@@ -994,7 +994,7 @@ Embedding functions convert text documents into vector embeddings for similarity
 
 ### 6.1 Default Embedding Function
 
-The `DefaultEmbeddingFunction` uses sentence-transformers and is the default embedding function if none is specified.
+The `DefaultEmbeddingFunction` uses all-MiniLM-L6-v2' and is the default embedding function if none is specified.
 
 ```python
 from pyseekdb import DefaultEmbeddingFunction
@@ -1013,11 +1013,6 @@ embeddings = ef(["Hello world", "How are you?"])
 print(f"Generated {len(embeddings)} embeddings, each with {len(embeddings[0])} dimensions")
 ```
 
-**Note:** The `DefaultEmbeddingFunction` requires the `sentence-transformers` package. Install it with:
-```bash
-pip install sentence-transformers
-```
-
 ### 6.2 Creating Custom Embedding Functions
 
 You can create custom embedding functions by implementing the `EmbeddingFunction` protocol. The function must:
@@ -1025,89 +1020,15 @@ You can create custom embedding functions by implementing the `EmbeddingFunction
 1. Implement `__call__` method that accepts `Documents` (str or List[str]) and returns `Embeddings` (List[List[float]])
 2. Optionally implement a `dimension` property to return the vector dimension
 
-#### Example 1: Simple Hash-Based Embedding Function
+#### Example: Sentence-Transformer Custom Embedding Function
 
 ```python
 from typing import List, Union
-import hashlib
-from pyseekdb import EmbeddingFunction, Documents, Embeddings
+from pyseekdb import EmbeddingFunction
 
-class SimpleHashEmbeddingFunction(EmbeddingFunction[Documents]):
-    """
-    A simple custom embedding function that uses hash-based vectorization.
-    
-    This creates fixed-dimensional embeddings by hashing the text.
-    """
-    
-    def __init__(self, dimension: int = 128):
-        """
-        Initialize the hash-based embedding function.
-        
-        Args:
-            dimension: The dimension of the embedding embeddings (default: 128)
-        """
-        self._dimension = dimension
-    
-    @property
-    def dimension(self) -> int:
-        """Get the dimension of embeddings produced by this function"""
-        return self._dimension
-    
-    def __call__(self, input: Documents) -> Embeddings:
-        """
-        Generate embeddings for the given documents using hash-based vectorization.
-        
-        Args:
-            input: Single document (str) or list of documents (List[str])
-            
-        Returns:
-            List of embedding embeddings (List[List[float]])
-        """
-        # Handle single string input
-        if isinstance(input, str):
-            input = [input]
-        
-        # Handle empty input
-        if not input:
-            return []
-        
-        embeddings = []
-        for doc in input:
-            # Create hash-based embedding
-            hash_obj = hashlib.md5(doc.encode('utf-8'))
-            hash_hex = hash_obj.hexdigest()
-            
-            # Convert hash to vector
-            vector = []
-            for i in range(0, min(len(hash_hex), self._dimension * 2), 2):
-                # Convert hex pair to float in range [0, 1]
-                hex_pair = hash_hex[i:i+2]
-                value = int(hex_pair, 16) / 255.0
-                vector.append(value)
-            
-            # Pad or truncate to exact dimension
-            while len(vector) < self._dimension:
-                vector.append(0.0)
-            vector = vector[:self._dimension]
-            
-            embeddings.append(vector)
-        
-        return embeddings
-
-# Use the custom embedding function
-ef = SimpleHashEmbeddingFunction(dimension=128)
-collection = client.create_collection(
-    name="my_collection",
-    configuration=HNSWConfiguration(dimension=128, distance='cosine'),
-    embedding_function=ef
-)
-```
-
-#### Example 2: Sentence-Transformer Custom Embedding Function
-
-```python
-from typing import List, Union
-from pyseekdb import EmbeddingFunction, Documents, Embeddings
+Documents = Union[str, List[str]]
+Embeddings = List[List[float]]
+Embedding = List[float]
 
 class SentenceTransformerCustomEmbeddingFunction(EmbeddingFunction[Documents]):
     """
@@ -1190,13 +1111,17 @@ collection = client.create_collection(
 )
 ```
 
-#### Example 3: OpenAI Embedding Function
+#### Example: OpenAI Embedding Function
 
 ```python
 from typing import List, Union
 import os
 import openai
-from pyseekdb import EmbeddingFunction, Documents, Embeddings
+from pyseekdb import EmbeddingFunction
+
+Documents = Union[str, List[str]]
+Embeddings = List[List[float]]
+Embedding = List[float]
 
 class OpenAIEmbeddingFunction(EmbeddingFunction[Documents]):
     """

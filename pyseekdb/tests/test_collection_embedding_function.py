@@ -404,11 +404,6 @@ class TestCollectionEmbeddingFunction:
         except ImportError:
             pytest.skip("SeekDB embedded package is not installed")
         
-        # Check if sentence-transformers is available for default embedding function
-        try:
-            from sentence_transformers import SentenceTransformer
-        except ImportError:
-            pytest.skip("sentence-transformers is not installed. Install with: pip install sentence-transformers")
         
         client = pyseekdb.Client(
             path=SEEKDB_PATH,
@@ -450,12 +445,6 @@ class TestCollectionEmbeddingFunction:
         except Exception as e:
             pytest.skip(f"Server connection failed ({SERVER_HOST}:{SERVER_PORT}): {e}")
         
-        # Check if sentence-transformers is available for default embedding function
-        try:
-            from sentence_transformers import SentenceTransformer
-        except ImportError:
-            pytest.skip("sentence-transformers is not installed. Install with: pip install sentence-transformers")
-        
         # Run all test methods
         self._test_create_collection_default_embedding_function(client)
         self._test_create_collection_explicit_none(client)
@@ -489,12 +478,6 @@ class TestCollectionEmbeddingFunction:
             assert result is not None
         except Exception as e:
             pytest.skip(f"OceanBase connection failed ({OB_HOST}:{OB_PORT}): {e}")
-        
-        # Check if sentence-transformers is available for default embedding function
-        try:
-            from sentence_transformers import SentenceTransformer
-        except ImportError:
-            pytest.skip("sentence-transformers is not installed. Install with: pip install sentence-transformers")
         
         # Run all test methods
         self._test_create_collection_default_embedding_function(client)
