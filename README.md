@@ -1,6 +1,6 @@
 # pyseekdb
 
-pyseekdb aims to provide developers with simple and easy-to-use APIs, reducing the learning curve and entry barriers. Compared to relational databases, database systems like MongoDB, ES, and Milvus simplify their main operations into KV operations in their Client APIs, making them more beginner-friendly. This SDK provides efficient and easy-to-use APIs for applications to access SeekDB and OceanBase's AI-related features. Advanced users can still use MySQL-compatible drivers to directly manipulate database objects in SeekDB and OceanBase through SQL statements.
+pyseekdb aims to provide developers with simple and easy-to-use APIs, reducing the learning curve and entry barriers. Compared to relational databases, database systems like MongoDB, ES, and Milvus simplify their main operations into KV operations in their Client APIs, making them more beginner-friendly. This SDK provides efficient and easy-to-use APIs for applications to access seekdb and OceanBase's AI-related features. Advanced users can still use MySQL-compatible drivers to directly manipulate database objects in seekdb and OceanBase through SQL statements.
 
 To achieve the above design goals, this SDK follows the following design principles:
 1. Fixed data model with schema-free interfaces. For beginners and application prototype development, users do not need to explicitly define relational table structures
@@ -27,18 +27,18 @@ pip install -U pyseekdb
 
 ## 1. Client Connection
 
-The `Client` class provides a unified interface for connecting to SeekDB in different modes. It automatically selects the appropriate connection mode based on the parameters provided.
+The `Client` class provides a unified interface for connecting to seekdb in different modes. It automatically selects the appropriate connection mode based on the parameters provided.
 
-### 1.1 Embedded SeekDB Client
+### 1.1 Embedded seekdb Client
 
-Connect to a local embedded SeekDB instance:
+Connect to a local embedded seekdb instance:
 
 ```python
 import pyseekdb
 
 # Create embedded client with explicit path
 client = pyseekdb.Client(
-    path="./seekdb",      # Path to SeekDB data directory
+    path="./seekdb",      # Path to seekdb data directory
     database="demo"        # Database name
 )
 
@@ -55,12 +55,12 @@ print(rows)
 
 ### 1.2 Remote Server Client
 
-Connect to a remote server (supports both SeekDB Server and OceanBase Server):
+Connect to a remote server (supports both seekdb Server and OceanBase Server):
 
 ```python
 import pyseekdb
 
-# Create remote server client (SeekDB Server)
+# Create remote server client (seekdb Server)
 client = pyseekdb.Client(
     host="127.0.0.1",      # Server host
     port=2881,              # Server port (default: 2881)
@@ -123,7 +123,7 @@ import pyseekdb
 # Embedded mode - Database management
 admin = pyseekdb.AdminClient(path="./seekdb")
 
-# Remote server mode - Database management (SeekDB Server)
+# Remote server mode - Database management (seekdb Server)
 admin = pyseekdb.AdminClient(
     host="127.0.0.1",
     port=2881,
@@ -153,7 +153,7 @@ admin = pyseekdb.AdminClient(
 
 **Parameters:**
 - `name` (str): Database name
-- `tenant` (str, optional): Tenant name (uses client's tenant if different, ignored for seekDB)
+- `tenant` (str, optional): Tenant name (uses client's tenant if different, ignored for seekdb)
 - `limit` (int, optional): Maximum number of results to return
 - `offset` (int, optional): Number of results to skip for pagination
 
@@ -968,7 +968,7 @@ print(f"Database has {collection_count} collections")
 
 ## 6. Embedding Functions
 
-Embedding functions convert text documents into vector embeddings for similarity search. SeekDBClient supports both built-in and custom embedding functions.
+Embedding functions convert text documents into vector embeddings for similarity search. pyseekdb supports both built-in and custom embedding functions.
 
 ### 6.1 Default Embedding Function
 
